@@ -1,0 +1,68 @@
+[
+  {
+    "name": "Rohit Aneja",
+    "title": "Business Automation",
+    "image": "/Consultants/Rohit.png",
+    "description": "An expert in business automation. Specializing in streamlining operations and boosting productivity.  ",
+    "skills": ["Business Strategy", "Digital Transformation", "Market Analysis", "Growth Planning"],
+    "rating": 4.9,
+    "reviews": 127,
+    "rate": "$350/hour",
+    "badge": null
+  },
+  {
+    "name": "Manish Jolly",
+    "title": "Bitrix24",
+    "image": "/Consultants/Manish.png",
+    "description": "A bitrix expert, specializing in CRM setup, automation, and custom integrations.",
+    "skills": ["Cloud Architecture", "System Design", "DevOps", "Microservices"],
+    "rating": 5.0,
+    "reviews": 89,
+    "rate": "$425/hour",
+    "badge": null
+  },
+  {
+    "name": "Monika Verma",
+    "title": "AI",
+    "image": "/Consultants/Monika.png",
+    "description": "leverages AI to enhance business efficiency, automate processes, and deliver data-driven solutions.",
+    "skills": ["Security Audits", "Compliance", "Threat Analysis", "Risk Management"],
+    "rating": 4.8,
+    "reviews": 156,
+    "rate": "$400/hour",
+    "badge": null
+  },
+  {
+    "name": "Nitish Goswami",
+    "title": "Marketing",
+    "image": "/Consultants/Nitish.png",
+    "description": "A results-driven digital marketing consultant, specializing in SEO, social media to help businesses grow.",
+    "skills": ["Process Optimization", "Lean Six Sigma", "Automation", "Quality Management"],
+    "rating": 4.7,
+    "reviews": 203,
+    "rate": "$300/hour",
+    "badge": null
+  },
+  {
+    "name": "Lakshay",
+    "title": "Website Development",
+    "image": "/Consultants/Lakshay.png",
+    "description": "A skilled website development consultant, specializing in building responsive, user-friendly websites.",
+    "skills": ["Growth Strategy", "Digital Marketing", "Customer Acquisition", "Brand Strategy"],
+    "rating": 4.9,
+    "reviews": 174,
+    "rate": "$375/hour",
+    "badge": null
+  },
+  {
+    "name": "David Kim",
+    "title": "Financial Strategy Advisor",
+    "image": "/Consultants/Rohit.png",
+    "description": "CPA and former Goldman Sachs investment banker with expertise in financial modeling, M&A, and fundraising. Helped 50+ companies raise over $500M in funding.",
+    "skills": ["Financial Planning", "Investment Strategy", "M&A Advisory", "Fundraising"],
+    "rating": 4.8,
+    "reviews": 92,
+    "rate": "$450/hour",
+    "badge": null
+  }
+]

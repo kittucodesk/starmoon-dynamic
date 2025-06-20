@@ -1,0 +1,10 @@
+[
+  { "name": "Web Development", "count": 1250, "icon": "💻" },
+  { "name": "Design & Creative", "count": 890, "icon": "🎨" },
+  { "name": "Digital Marketing", "count": 670, "icon": "📈" },
+  { "name": "Writing & Translation", "count": 540, "icon": "✍️" },
+  { "name": "Home Services", "count": 430, "icon": "🏠" },
+  { "name": "Business Consulting", "count": 320, "icon": "💼" },
+  { "name": "Photography", "count": 280, "icon": "📸" },
+  { "name": "Tutoring & Education", "count": 190, "icon": "📚" }
+]

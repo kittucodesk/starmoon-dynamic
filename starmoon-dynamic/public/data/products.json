@@ -1,0 +1,115 @@
+[
+  {
+    "id": 1,
+    "title": "Bitrix24",
+    "category": "CRM",
+    "description": "Advanced business intelligence platform with real-time insights and customizable reporting.",
+    "image": "/Products/1.png",
+    "features": [
+      "Sites and Store",
+      "Team Collaboration Tools",
+      "Project & Task Organization",
+      "CRM & Customer Management",
+      "Document Management System"
+    ],
+    "badge": "Best Value",
+    "ribbon": "Most Popular",
+    "pricing": {
+      "monthly": "₹1,299",
+      "yearly": "₹8,499",
+      "currency": "INR",
+      "discount": "35% off",
+      "original_yearly": "₹12,999"
+    }
+  },
+  {
+    "id": 2,
+    "title": "Graebert",
+    "category": "Automation",
+    "description": "Streamline your processes with intelligent automation tools and seamless integrations.",
+    "image": "/Products/4.png",
+    "features": [
+      "2D/3D Drafting",
+      "Supports all OS",
+      "CAD Design Tools",
+      "Collaboration Options",
+      "Visualise, Analyse and Simulate"
+    ],
+    "badge": "Best Seller",
+    "ribbon": "Limited Time",
+    "pricing": {
+      "monthly": "₹1,499",
+      "yearly": "₹10,999",
+      "currency": "INR",
+      "discount": "25% off",
+      "original_yearly": "₹14,999"
+    }
+  },
+  {
+    "id": 3,
+    "title": "SocifyIt",
+    "category": "Marketing",
+    "description": "Comprehensive security solution with advanced threat detection and compliance monitoring.",
+    "image": "/Products/3.png",
+    "features": [
+      "AI Chatbot",
+      "Real-Time Insights",
+      "AI Composer",
+      "Planning and Scheduling",
+      "Social Media Management"
+    ],
+    "badge": "Top Rated",
+    "ribbon": "Best Value",
+    "pricing": {
+      "monthly": "₹1,999",
+      "yearly": "₹15,999",
+      "currency": "INR",
+      "discount": "30% off",
+      "original_yearly": "₹22,999"
+    }
+  },
+  {
+    "id": 4,
+    "title": "Wazzup",
+    "category": "Communication",
+    "description": "Comprehensive security solution with advanced threat detection and compliance monitoring.",
+    "image": "/Products/2.png",
+    "features": [
+      "Automated Replies",
+      "Real-Time Support",
+      "WhatsApp Integration",
+      "Customer Engagement",
+      "Access to Chat History"
+    ],
+    "badge": "New",
+    "pricing": {
+      "monthly": "₹899",
+      "yearly": "₹7,499",
+      "currency": "INR",
+      "discount": "20% off",
+      "original_yearly": "₹9,499"
+    }
+  },
+  {
+    "id": 5,
+    "title": "ChatApp",
+    "category": "Communication",
+    "description": "Comprehensive security solution with advanced threat detection and compliance monitoring.",
+    "image": "/Products/5.png",
+    "features": [
+      "Chat Features",
+      "AI Automation",
+      "Automated Replies",
+      "Custom Messaging",
+      "Necessary Data Analysis"
+    ],
+    "badge": "Popular",
+    "pricing": {
+      "monthly": "₹1,199",
+      "yearly": "₹9,999",
+      "currency": "INR",
+      "discount": "15% off",
+      "original_yearly": "₹11,999"
+    }
+  }
+]

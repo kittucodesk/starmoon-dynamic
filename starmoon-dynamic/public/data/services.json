@@ -1,0 +1,77 @@
+[
+  {
+    "id": 1,
+    "title": "Business Automation",
+    "image": "/FindService/BusinessAutomation.jpg",
+    "price": "$100",
+    "description": "Modernize your business operations with cutting-edge technology solutions and strategic digital initiatives.",
+    "icon": "Zap",
+    "features": [
+      "Data-Driven Insights",
+      "Increased Efficiency",
+      "Better Decision-Making",
+      "Consistency and Accuracy",
+      "Improved Customer Experience"
+    ]
+  },
+  {
+    "id": 2,
+    "title": "Digital Marketing",
+    "description": "Protect your business with comprehensive security assessments, implementation, and ongoing monitoring.",
+    "icon": "Shield",
+    "image": "/FindService/DigitalMarketing.jpg",
+    "price": "$100",
+    "features": [
+      "Global Reach",
+      "Brand Development",
+      "Increased Engagement",
+      "Improved Conversion Rates",
+      "Search Engine Optimization"
+    ]
+  },
+  {
+    "id": 3,
+    "title": "Web Development",
+    "image": "/FindService/WebDevelopment.png",
+    "price": "$100",
+    "description": "Strategic planning and execution support to help your business achieve sustainable growth and competitive advantage.",
+    "icon": "Users",
+    "features": [
+      "Global Reach",
+      "Competitor Advantage",
+      "Analytics and Insights",
+      "Increased Online Presence",
+      "Convenience and Accessibility"
+    ]
+  },
+  {
+    "id": 4,
+    "title": "Accounting",
+    "image": "/FindService/Accounting.jpg",
+    "price": "$100",
+    "description": "Strategic planning and execution support to help your business achieve sustainable growth and competitive advantage.",
+    "icon": "Users",
+    "features": [
+      "Tax Planning",
+      "Informed Decision Making",
+      "Supports Business Growth",
+      "Better Financial Management",
+      "Improved Cash Flow Management"
+    ]
+  },
+  {
+    "id": 5,
+    "title": "Trainings",
+    "image": "/FindService/Training.jpg",
+    "price": "$100",
+    "description": "Strategic planning and execution support to help your business achieve sustainable growth and competitive advantage.",
+    "icon": "Users",
+    "features": [
+      "Collaboration",
+      "Better Teamwork",
+      "Increased Efficiency",
+      "Adaptation to New Technology",
+      "Improved Employee Performance"
+    ]
+  }
+]
