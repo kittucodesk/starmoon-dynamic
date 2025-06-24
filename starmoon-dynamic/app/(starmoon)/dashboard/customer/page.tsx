@@ -3,7 +3,10 @@ import CustomerDashboardClient from './dashboard-client'
 
 const Page = () => {
   return (
-    <CustomerDashboardClient />
+    // <CustomerDashboardClient />
+    <div>
+      <h1>Page</h1>
+    </div>
   )
 }
 
