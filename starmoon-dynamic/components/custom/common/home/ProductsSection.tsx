@@ -146,8 +146,8 @@ const transformProductData = (apiProduct: DetailedProduct): Product => {
       return apiProduct.product_thumb_image;
     }
     
-    const domain = process.env.NEXT_PUBLIC_DOMAIN_URL || '';
-    return `${domain}${apiProduct.product_thumb_image}`;
+     
+    return `${process.env.NEXT_PUBLIC_DOMAIN_URL}${apiProduct.product_thumb_image}`;
   };
 
   // Safe ribbon detection

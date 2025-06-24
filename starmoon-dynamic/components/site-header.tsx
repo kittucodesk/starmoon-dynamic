@@ -28,6 +28,8 @@ import {
   ChevronRight,
   Sun,
   Moon,
+  LogOut,
+  User,
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -39,16 +41,26 @@ import {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import Image from "next/image"
-import { cn } from "@/lib/utils"
+import { cn, authUtils, type StoredUserData } from "@/lib/utils"
 import { type HeaderMenuItem } from "@/lib/api"
+import { useRouter } from "next/navigation"
+import { useAppSelector, useAppDispatch } from "@/lib/store/hooks"
+import { logout, loginSuccess } from "@/lib/store/slices/authSlice"
+import { toggleCart } from "@/lib/store/slices/cartSlice"
+import { CartDrawer } from "@/components/cart/cart-drawer"
 
 interface SiteHeaderProps {
   showSearch?: boolean
-  isLoggedIn?: boolean
-  userAvatar?: string
-  userInitials?: string
   menuData?: HeaderMenuItem[]
 }
 
@@ -83,9 +95,6 @@ interface MenuSection {
 
 export function SiteHeader({
   showSearch = false,
-  isLoggedIn = false,
-  userAvatar,
-  userInitials = "U",
   menuData = [],
 }: SiteHeaderProps) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -93,6 +102,33 @@ export function SiteHeader({
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const mobileSearchRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+
+  // Redux state
+  const dispatch = useAppDispatch();
+  const { isAuthenticated: isLoggedIn, user: userData } = useAppSelector(state => state.auth);
+  const { totalItems: cartItemCount, isOpen: cartIsOpen } = useAppSelector(state => state.cart);
+
+  console.log("🔍 Auth State Debug:", {
+    isLoggedIn,
+    userData,
+    hasUserData: !!userData,
+    userName: userData?.name,
+    userEmail: userData?.email
+  });
+
+  // Check localStorage directly
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedUserData = localStorage.getItem('user_data');
+      const storedToken = localStorage.getItem('auth_token');
+      console.log("🗄️ Direct localStorage check:", {
+        storedUserData: storedUserData ? JSON.parse(storedUserData) : null,
+        storedToken,
+        allLocalStorageKeys: Object.keys(localStorage)
+      });
+    }
+  }, []);
 
   // Theme toggle state
   const { theme, setTheme } = useTheme();
@@ -103,13 +139,50 @@ export function SiteHeader({
     setMounted(true);
   }, []);
 
+  // Get user initials from Redux state
+  const getUserInitials = () => {
+    if (userData?.name) {
+      return userData.name
+        .split(' ')
+        .map(name => name.charAt(0))
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    return "U";
+  };
+
+  // Handle logout using Redux
+  const handleLogout = () => {
+    dispatch(logout());
+    router.push('/');
+  };
+
+  // Handle cart toggle
+  const handleCartToggle = () => {
+    dispatch(toggleCart());
+  };
+
+  // Temporary test function
+  const testUserData = () => {
+    dispatch(loginSuccess({
+      user: {
+        id: 999,
+        name: "Test User",
+        email: "test@example.com",
+        user_type: "CUSTOMER"
+      },
+      token: "test_token"
+    }));
+  };
+
   // Handle click outside to close search overlay
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
       const isOutsideDesktop = searchRef.current && !searchRef.current.contains(target);
       const isOutsideMobile = mobileSearchRef.current && !mobileSearchRef.current.contains(target);
-      
+
       if (isOutsideDesktop && isOutsideMobile) {
         setShowSearchOverlay(false);
       }
@@ -277,10 +350,10 @@ export function SiteHeader({
           <div className="flex items-center justify-between">
             {/* Left: Logo */}
             <Link href="/" className="flex items-center">
-              <img 
-                src="/Company_Logo.png" 
-                alt="Starmoon Logo" 
-                className="h-12 w-auto min-w-[120px] dark:brightness-0 dark:invert transition-all duration-300" 
+              <img
+                src="/Company_Logo.png"
+                alt="Starmoon Logo"
+                className="h-12 w-auto min-w-[120px] dark:brightness-0 dark:invert transition-all duration-300"
               />
             </Link>
 
@@ -314,79 +387,79 @@ export function SiteHeader({
                             </span>
                           </NavigationMenuTrigger>
                           <NavigationMenuContent>
-                        <div className="w-[90vw] max-w-[1200px] p-4 xl:p-8">
-                          <div className="grid grid-cols-12 gap-4 xl:gap-8">
-                            {/* Categories */}
-                            <div className="col-span-12 lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                              {menu.items.map((item) => (
-                                <div key={item.label} className="space-y-3">
-                                  <Link
-                                    href={item.href}
-                                    className="group flex items-center justify-center gap-3 p-2 rounded-xl hover:bg-primary/5 dark:hover:bg-slate-700/50 transition-colors"
-                                  >
-                                    {item.icon && (
-                                      <div className="flex items-center justify-center h-8 w-8 rounded-xl bg-primary/10 dark:bg-primary/20 group-hover:bg-primary/20 dark:group-hover:bg-primary/30 transition-colors">
-                                        <div className="h-6 w-6 mx-auto flex items-center justify-center text-primary">
-                                          {item.icon}
+                            <div className="w-[90vw] max-w-[1200px] p-4 xl:p-8">
+                              <div className="grid grid-cols-12 gap-4 xl:gap-8">
+                                {/* Categories */}
+                                <div className="col-span-12 lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                  {menu.items.map((item) => (
+                                    <div key={item.label} className="space-y-3">
+                                      <Link
+                                        href={item.href}
+                                        className="group flex items-center justify-center gap-3 p-2 rounded-xl hover:bg-primary/5 dark:hover:bg-slate-700/50 transition-colors"
+                                      >
+                                        {item.icon && (
+                                          <div className="flex items-center justify-center h-8 w-8 rounded-xl bg-primary/10 dark:bg-primary/20 group-hover:bg-primary/20 dark:group-hover:bg-primary/30 transition-colors">
+                                            <div className="h-6 w-6 mx-auto flex items-center justify-center text-primary">
+                                              {item.icon}
+                                            </div>
+                                          </div>
+                                        )}
+                                        <span className="text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary transition-colors">
+                                          {item.label}
+                                        </span>
+                                        <ChevronRight className="h-5 w-5 ml-auto text-gray-400 group-hover:text-primary transition-colors" />
+                                      </Link>
+                                      {item.subCategories?.map((subCat, idx) => (
+                                        <div key={subCat.title} className="pl-13">
+                                          {idx > 0 && <div className="my-4 border-t border-gray-200 dark:border-slate-600"></div>}
+                                          <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 pl-3">
+                                            {subCat.title}
+                                          </div>
+                                          <ul className="space-y-2.5 pl-3">
+                                            {subCat.items.map((subItem) => (
+                                              <li key={subItem.label}>
+                                                <Link
+                                                  href={subItem.href}
+                                                  className="text-sm text-gray-600 dark:text-gray-300 hover:text-primary hover:underline flex items-center group"
+                                                >
+                                                  <span className="relative">
+                                                    <span className="absolute -left-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                      •
+                                                    </span>
+                                                    {subItem.label}
+                                                  </span>
+                                                </Link>
+                                              </li>
+                                            ))}
+                                          </ul>
                                         </div>
-                                      </div>
-                                    )}
-                                    <span className="text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary transition-colors">
-                                      {item.label}
-                                    </span>
-                                    <ChevronRight className="h-5 w-5 ml-auto text-gray-400 group-hover:text-primary transition-colors" />
-                                  </Link>
-                                  {item.subCategories?.map((subCat, idx) => (
-                                    <div key={subCat.title} className="pl-13">
-                                      {idx > 0 && <div className="my-4 border-t border-gray-200 dark:border-slate-600"></div>}
-                                      <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 pl-3">
-                                        {subCat.title}
-                                      </div>
-                                      <ul className="space-y-2.5 pl-3">
-                                        {subCat.items.map((subItem) => (
-                                          <li key={subItem.label}>
-                                            <Link
-                                              href={subItem.href}
-                                              className="text-sm text-gray-600 dark:text-gray-300 hover:text-primary hover:underline flex items-center group"
-                                            >
-                                              <span className="relative">
-                                                <span className="absolute -left-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                  •
-                                                </span>
-                                                {subItem.label}
-                                              </span>
-                                            </Link>
-                                          </li>
-                                        ))}
-                                      </ul>
+                                      ))}
                                     </div>
                                   ))}
                                 </div>
-                              ))}
-                            </div>
 
-                            {/* Featured Section */}
-                            <div className="col-span-4 space-y-8">
-                              {menu.bannerImage && (
-                                <div className="relative h-48 rounded-2xl overflow-hidden">
-                                  <Image
-                                    src={menu.bannerImage}
-                                    alt={menu.title}
-                                    fill
-                                    className="object-cover"
-                                  />
-                                  <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary/40 dark:from-slate-900/90 dark:to-slate-800/40" />
-                                  <div className="absolute bottom-0 left-0 p-6 text-white">
-                                    <h3 className="font-bold text-2xl mb-2">{menu.bannerTitle}</h3>
-                                    <p className="text-white/90 text-sm leading-relaxed">
-                                      {menu.bannerDescription}
-                                    </p>
-                                  </div>
-                                </div>
-                              )}
+                                {/* Featured Section */}
+                                <div className="col-span-4 space-y-8">
+                                  {menu.bannerImage && (
+                                    <div className="relative h-48 rounded-2xl overflow-hidden">
+                                      <Image
+                                        src={menu.bannerImage}
+                                        alt={menu.title}
+                                        fill
+                                        className="object-cover"
+                                      />
+                                      <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary/40 dark:from-slate-900/90 dark:to-slate-800/40" />
+                                      <div className="absolute bottom-0 left-0 p-6 text-white">
+                                        <h3 className="font-bold text-2xl mb-2">{menu.bannerTitle}</h3>
+                                        <p className="text-white/90 text-sm leading-relaxed">
+                                          {menu.bannerDescription}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )}
 
-                              {/* Featured Products */}
-                              {/* <div className="bg-gray-50 dark:bg-slate-800 rounded-2xl p-6">
+                                  {/* Featured Products */}
+                                  {/* <div className="bg-gray-50 dark:bg-slate-800 rounded-2xl p-6">
                                 <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-4 text-lg">
                                   Featured Products
                                 </h4>
@@ -432,12 +505,12 @@ export function SiteHeader({
                                   )}
                                 </div>
                               </div> */}
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      </NavigationMenuContent>
-                          </>
-                        )}
+                          </NavigationMenuContent>
+                        </>
+                      )}
                     </NavigationMenuItem>
                   ))}
 
@@ -541,9 +614,23 @@ export function SiteHeader({
                 <Search className="h-5 w-5" />
               </Button>
 
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleCartToggle}
+                className="relative bg-primary/5 dark:bg-primary/10 hover:bg-primary/10 dark:hover:bg-primary/20 rounded-full transition-colors duration-200"
+              >
+                <ShoppingCart className="h-5 w-5 text-primary" />
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 h-5 w-5 bg-primary dark:bg-none text-white text-xs font-medium rounded-full flex items-center justify-center shadow-sm ring-2 ring-white dark:ring-slate-900">
+                    {cartItemCount}
+                  </span>
+                )}
+              </Button>
+
               {isLoggedIn ? (
                 <>
-                  <Button
+                  {/* <Button
                     variant="ghost"
                     size="icon"
                     className="relative hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full hidden md:flex"
@@ -552,16 +639,56 @@ export function SiteHeader({
                     <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center shadow-sm ring-2 ring-white dark:ring-slate-900">
                       2
                     </span>
-                  </Button>
-                  <Avatar className="h-8 w-8 md:h-9 md:w-9 ring-2 ring-primary/10">
-                    <AvatarImage
-                      src={userAvatar || "/placeholder.svg?height=32&width=32"}
-                      alt="User"
-                    />
-                    <AvatarFallback className="bg-primary/5 text-primary">
-                      {userInitials}
-                    </AvatarFallback>
-                  </Avatar>
+                  </Button> */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                        <Avatar className="h-8 w-8 md:h-9 md:w-9 ring-2 ring-primary/10 flex items-center justify-center">
+                          {/* <AvatarImage
+                            src="/placeholder.svg?height=32&width=32"
+                            alt="User"
+                          /> */}
+                          {getUserInitials()}
+                          {/* <AvatarFallback className="bg-primary text-primary">
+                            {getUserInitials()}
+                          </AvatarFallback> */}
+                        </Avatar>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56" align="center" forceMount>
+                      <DropdownMenuLabel className="font-normal">
+                        <div className="flex flex-col space-y-1">
+                          <p className="text-sm font-medium leading-none">
+                            {userData?.name || 'User'}
+                          </p>
+                          <p className="text-xs leading-none text-muted-foreground">
+                            {userData?.email || 'user@example.com'}
+                          </p>
+                        </div>
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {/* <DropdownMenuItem asChild>
+                        <Link href="/dashboard/customer" className="flex items-center">
+                          <User className="mr-2 h-4 w-4" />
+                          <span>Profile</span>
+                        </Link>
+                      </DropdownMenuItem> */}
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard/customer" className="flex items-center">
+                          <Monitor className="mr-2 h-4 w-4" />
+                          <span>Dashboard</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-red-600 dark:text-red-400 cursor-pointer"
+                        onClick={handleLogout}
+                      >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Log out</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </>
               ) : (
                 <div className="hidden md:flex items-center space-x-3">
@@ -573,19 +700,13 @@ export function SiteHeader({
                       Sign In
                     </Button>
                   </Link>
+                  <Link href="/signup">
+                    <Button className="rounded-full px-4 lg:px-6">
+                      Get Started
+                    </Button>
+                  </Link>
                 </div>
               )}
-
-              <Button
-                variant="ghost"
-                size="icon"
-                className="relative bg-primary/5 dark:bg-primary/10 hover:bg-primary/10 dark:hover:bg-primary/20 rounded-full transition-colors duration-200"
-              >
-                <ShoppingCart className="h-5 w-5 text-primary" />
-                <span className="absolute -top-1 -right-1 h-5 w-5 bg-primary dark:bg-none text-white text-xs font-medium rounded-full flex items-center justify-center shadow-sm ring-2 ring-white dark:ring-slate-900">
-                  3
-                </span>
-              </Button>
 
               {/* Mobile Menu Toggle */}
               <Button
@@ -715,6 +836,9 @@ export function SiteHeader({
           )}
         </div>
       </header>
+
+      {/* Cart Drawer */}
+      <CartDrawer />
     </>
   )
 }

@@ -4,6 +4,9 @@ import { CheckCircle, ChevronRight, ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useAppDispatch } from "@/lib/store/hooks";
+import { addToCart } from "@/lib/store/slices/cartSlice";
+import { useToast } from "@/hooks/use-toast";
 
 type Product = {
     id: number;
@@ -25,6 +28,34 @@ type Product = {
 
 export default function ProductCard({ product }: { product: Product }) {
     const router = useRouter();
+    const dispatch = useAppDispatch();
+    const { toast } = useToast();
+
+    const handleAddToCart = (e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent card click event
+        
+        // Extract price from yearly pricing (remove currency symbols and parse)
+        const priceString = product.pricing.yearly.replace(/[^0-9.]/g, '');
+        const price = parseFloat(priceString) || 0;
+        
+        dispatch(addToCart({
+            id: product.id.toString(),
+            name: product.title,
+            type: "product",
+            image: product.image,
+            price: price,
+            quantity: 1,
+        }));
+
+        toast({
+            title: "Added to Cart",
+            description: `${product.title} has been added to your cart.`,
+        });
+    };
+
+    const handleViewDetails = () => {
+        router.push(`/products/${product.id}`);
+    };
 
     return (
         <Card className="h-full group hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/20 dark:hover:border-primary/30 bg-gradient-to-b from-white to-gray-50/50 dark:from-slate-800 dark:to-slate-900/50 relative overflow-hidden dark:border-slate-700">
@@ -36,13 +67,13 @@ export default function ProductCard({ product }: { product: Product }) {
                 </div>
             )}
             <CardHeader className="px-2 py-3">
-                <div className="overflow-hidden rounded-lg bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20 relative">
+                <div className="overflow-hidden rounded-lg bg-white dark:from-primary/10 dark:to-primary/20 relative">
                     <Image
                         src={product.image}
                         width={300}
                         height={200}
                         alt={product.title}
-                        className="mx-auto aspect-video w-full object-cover transform group-hover:scale-105 transition-transform duration-300"
+                        className="h-[200px] w-full object-contain transform group-hover:scale-105 transition-transform duration-300"
                     />
                     {product.badge && (
                         <Badge className="absolute top-2 left-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm text-primary dark:text-blue-400 border-2 border-primary/20 dark:border-blue-400/30 shadow-lg">
@@ -83,11 +114,11 @@ export default function ProductCard({ product }: { product: Product }) {
                             )}
                         </div>
                     </div>
-                    <Button size="sm" className="rounded-full h-10 w-10 bg-primary/10 dark:bg-primary/20 hover:bg-primary text-primary dark:text-blue-400 hover:text-white transition-colors">
+                    <Button size="sm" className="rounded-full h-10 w-10 bg-primary/10 dark:bg-primary/20 hover:bg-primary text-primary dark:text-blue-400 hover:text-white transition-colors" onClick={handleAddToCart}>
                         <ShoppingCart className="w-4 h-4" />
                     </Button>
                 </div>
-                <Button variant="outline" size="sm" className="w-full hover:bg-primary hover:text-white dark:border-slate-600 dark:text-gray-200 dark:hover:bg-primary dark:hover:text-white transition-colors">
+                <Button variant="outline" size="sm" className="w-full hover:bg-primary hover:text-white dark:border-slate-600 dark:text-gray-200 dark:hover:bg-primary dark:hover:text-white transition-colors" onClick={handleViewDetails}>
                     View Details
                 </Button>
             </CardFooter>

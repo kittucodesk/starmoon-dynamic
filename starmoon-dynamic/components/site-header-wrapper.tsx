@@ -3,9 +3,6 @@ import { SiteHeader } from "./site-header"
 
 interface SiteHeaderWrapperProps {
   showSearch?: boolean
-  isLoggedIn?: boolean
-  userAvatar?: string
-  userInitials?: string
 }
 
 async function SiteHeaderServer(props: SiteHeaderWrapperProps) {

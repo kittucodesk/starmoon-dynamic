@@ -196,7 +196,7 @@ export default function HeroBanner({ bannerData }: HeroBannerProps) {
                 >
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent dark:from-slate-900/40 dark:to-transparent rounded-2xl" />
                   <Image
-                    src={process.env.NEXT_PUBLIC_DOMAIN_URL + slide.image}
+                    src={`${process.env.NEXT_PUBLIC_DOMAIN_URL}${slide.image}`}
                     alt={slide.title}
                     width={600}
                     height={400}

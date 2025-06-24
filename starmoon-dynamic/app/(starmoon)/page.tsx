@@ -8,6 +8,7 @@ import BrandsSection from "@/components/custom/common/home/BrandsSection"
 import ConsultationSection from "@/components/custom/common/home/ConsultationSection"
 import NewsEventsSection from "@/components/custom/common/home/NewsEventsSection"
 import NewsletterSection from "@/components/custom/common/home/NewsletterSection"
+import { AddToCartDemo } from "@/components/cart/add-to-cart-demo"
 import { fetchAboutUs, fetchBanners, fetchTestimonials, fetchNews, type Banner, type AboutUs, type Testimonial, type NewsItem } from "@/lib/api"
 
 export default async function HomePage() {
@@ -115,6 +116,9 @@ export default async function HomePage() {
 
       {/* Newsletter Signup */}
       <NewsletterSection />
+      
+      {/* Demo Cart Buttons for Testing */}
+      <AddToCartDemo />
     </div>
   )
 }

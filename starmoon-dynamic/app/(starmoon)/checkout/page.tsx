@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -18,16 +18,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Progress } from '@/components/ui/progress'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { useAppSelector } from '@/lib/store/hooks'
 
-// Form validation schema
-const checkoutSchema = z.object({
+// Form validation schema - dynamic based on auth status
+const createCheckoutSchema = (isAuthenticated: boolean) => z.object({
   accountType: z.enum(['guest', 'create', 'existing']),
   password: z.string().optional(),
   confirmPassword: z.string().optional(),
   fullName: z.string().min(2, 'Full name is required'),
   company: z.string().optional(),
-  email: z.string().email('Invalid email address'),
-  phone: z.string().min(10, 'Phone number is required'),
+  email: isAuthenticated ? z.string().optional() : z.string().email('Invalid email address'),
+  phone: isAuthenticated ? z.string().optional() : z.string().min(10, 'Phone number is required'),
   billingAddress: z.object({
     street: z.string().min(1, 'Street address is required'),
     city: z.string().min(1, 'City is required'),
@@ -72,6 +73,12 @@ export default function CheckoutPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [passwordStrength, setPasswordStrength] = useState(0)
 
+  // Get auth state from Redux
+  const { isAuthenticated, user } = useAppSelector((state) => state.auth)
+  
+  // Create schema based on auth status
+  const checkoutSchema = createCheckoutSchema(isAuthenticated)
+
   const form = useForm<z.infer<typeof checkoutSchema>>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
@@ -79,8 +86,19 @@ export default function CheckoutPage() {
       useBillingForShipping: true,
       paymentMethod: 'stripe',
       savePaymentMethod: false,
+      // Pre-fill user data if authenticated
+      fullName: isAuthenticated ? user?.name || '' : '',
+      email: isAuthenticated ? user?.email || '' : '',
     },
   })
+
+  // Update form when auth state changes
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      form.setValue('fullName', user.name || '')
+      form.setValue('email', user.email || '')
+    }
+  }, [isAuthenticated, user, form])
 
   const accountType = form.watch('accountType')
   const useBillingForShipping = form.watch('useBillingForShipping')
@@ -106,12 +124,12 @@ export default function CheckoutPage() {
       <div className="container mx-auto px-4 py-4 sm:py-8">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
-          {/* <Button variant="ghost" size="sm" asChild> */}
-            <Link href="/" className='flex items-center gap-2 text-sm'>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/cart" className='flex items-center gap-2 text-sm'>
               <ChevronLeft className="h-4 w-4" />
               Back to Cart
             </Link>
-          {/* </Button> */}
+          </Button>
         </div>
 
         {/* Progress Indicator */}
@@ -137,7 +155,8 @@ export default function CheckoutPage() {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 sm:space-y-8">
-            {/* Checkout Options */}
+            {/* Checkout Options - Only show if not authenticated */}
+            {!isAuthenticated && (
             <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -156,39 +175,51 @@ export default function CheckoutPage() {
                           defaultValue={field.value}
                           className="grid grid-cols-1 sm:grid-cols-3 gap-4"
                         >
-                          <motion.div
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="flex items-center space-x-3 rounded-lg border p-4 hover:bg-accent hover:border-primary/20 hover:shadow-sm transition-all duration-200 cursor-pointer group focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/30"
+                          <div
+                            className={`flex items-center space-x-3 rounded-lg border-2 p-4 cursor-pointer transition-all duration-200 ${
+                              field.value === 'guest' 
+                                ? 'border-primary bg-primary/5 shadow-md ring-1 ring-primary/20' 
+                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                            }`}
                           >
                             <RadioGroupItem value="guest" id="guest" />
                             <div className="flex-1">
-                              <Label htmlFor="guest" className="text-base font-medium cursor-pointer group-hover:text-primary transition-colors">
+                              <Label htmlFor="guest" className={`text-base font-medium cursor-pointer transition-colors ${
+                                field.value === 'guest' ? 'text-primary' : 'text-gray-900'
+                              }`}>
                                 Continue as Guest
                               </Label>
-                              <p className="text-sm text-muted-foreground group-hover:text-muted-foreground/80 transition-colors">
+                              <p className={`text-sm transition-colors ${
+                                field.value === 'guest' ? 'text-primary/70' : 'text-muted-foreground'
+                              }`}>
                                 Quick checkout without creating an account
                               </p>
                             </div>
-                          </motion.div>
+                          </div>
 
-                          <motion.div
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="flex items-center space-x-3 rounded-lg border p-4 hover:bg-accent hover:border-primary/20 hover:shadow-sm transition-all duration-200 cursor-pointer group focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/30"
+                          <div
+                            className={`flex items-center space-x-3 rounded-lg border-2 p-4 cursor-pointer transition-all duration-200 ${
+                              field.value === 'create' 
+                                ? 'border-primary bg-primary/5 shadow-md ring-1 ring-primary/20' 
+                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                            }`}
                           >
                             <RadioGroupItem value="create" id="create" />
                             <div className="flex-1">
-                              <Label htmlFor="create" className="text-base font-medium cursor-pointer group-hover:text-primary transition-colors">
+                              <Label htmlFor="create" className={`text-base font-medium cursor-pointer transition-colors ${
+                                field.value === 'create' ? 'text-primary' : 'text-gray-900'
+                              }`}>
                                 Create Account
                               </Label>
-                              <p className="text-sm text-muted-foreground group-hover:text-muted-foreground/80 transition-colors">
+                              <p className={`text-sm transition-colors ${
+                                field.value === 'create' ? 'text-primary/70' : 'text-muted-foreground'
+                              }`}>
                                 Save your information for faster future checkouts
                               </p>
                             </div>
-                          </motion.div>
+                          </div>
 
-                          <div className="flex items-center space-x-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors duration-200">
+                          <div className="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-gray-300 hover:bg-gray-50 transition-all duration-200">
                             <Button
                               type="button"
                               variant="ghost"
@@ -308,6 +339,24 @@ export default function CheckoutPage() {
                 )}
               </CardContent>
             </Card>
+            )}
+
+            {/* Show logged in user info if authenticated */}
+            {isAuthenticated && user && (
+              <Card className="shadow-sm bg-green-50 border-green-200">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                      <Check className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-green-900">Logged in as {user.name}</p>
+                      <p className="text-sm text-green-700">{user.email}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Contact Information */}
             <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
@@ -326,6 +375,7 @@ export default function CheckoutPage() {
                           <Input
                             placeholder="Enter your full name"
                             className="focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+                            disabled={isAuthenticated}
                             {...field}
                           />
                         </FormControl>
@@ -349,35 +399,50 @@ export default function CheckoutPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email Address *</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="Enter your email" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                {/* Only show email and phone fields when not authenticated */}
+                {!isAuthenticated && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email Address *</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="Enter your email" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone Number *</FormLabel>
-                        <FormControl>
-                          <Input type="tel" placeholder="Enter your phone number" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone Number *</FormLabel>
+                          <FormControl>
+                            <Input type="tel" placeholder="Enter your phone number" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+
+                {/* Show message when authenticated that email/phone are taken from account */}
+                {isAuthenticated && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 text-blue-700">
+                      <Check className="w-4 h-4" />
+                      <span className="text-sm font-medium">
+                        Email and phone number will be taken from your account
+                      </span>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -610,10 +675,12 @@ export default function CheckoutPage() {
                           defaultValue={field.value}
                           className="space-y-4"
                         >
-                          <motion.div
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="flex items-center space-x-3 rounded-lg border-2 border-transparent p-4 hover:bg-accent hover:border-primary/20 hover:shadow-sm transition-all duration-200 cursor-pointer group focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/30"
+                          <div
+                            className={`flex items-center space-x-3 rounded-lg border-2 p-4 cursor-pointer transition-all duration-200 ${
+                              field.value === 'stripe' 
+                                ? 'border-primary bg-primary/5 shadow-md ring-1 ring-primary/20' 
+                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                            }`}
                           >
                             <RadioGroupItem value="stripe" id="stripe" />
                             <div className="flex items-center gap-3 flex-1">
@@ -621,21 +688,29 @@ export default function CheckoutPage() {
                                 stripe
                               </div>
                               <div>
-                                <Label htmlFor="stripe" className="text-base font-medium cursor-pointer group-hover:text-primary transition-colors">
+                                <Label htmlFor="stripe" className={`text-base font-medium cursor-pointer transition-colors ${
+                                  field.value === 'stripe' ? 'text-primary' : 'text-gray-900'
+                                }`}>
                                   Pay with Stripe
                                 </Label>
-                                <p className="text-sm text-muted-foreground group-hover:text-muted-foreground/80 transition-colors">
+                                <p className={`text-sm transition-colors ${
+                                  field.value === 'stripe' ? 'text-primary/70' : 'text-muted-foreground'
+                                }`}>
                                   Secure payment processing
                                 </p>
                               </div>
                             </div>
-                            <CreditCard className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                          </motion.div>
+                            <CreditCard className={`h-5 w-5 transition-colors ${
+                              field.value === 'stripe' ? 'text-primary' : 'text-muted-foreground'
+                            }`} />
+                          </div>
 
-                          <motion.div
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="flex items-center space-x-3 rounded-lg border-2 border-transparent p-4 hover:bg-accent hover:border-primary/20 hover:shadow-sm transition-all duration-200 cursor-pointer group focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/30"
+                          <div
+                            className={`flex items-center space-x-3 rounded-lg border-2 p-4 cursor-pointer transition-all duration-200 ${
+                              field.value === 'razorpay' 
+                                ? 'border-primary bg-primary/5 shadow-md ring-1 ring-primary/20' 
+                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                            }`}
                           >
                             <RadioGroupItem value="razorpay" id="razorpay" />
                             <div className="flex items-center gap-3 flex-1">
@@ -643,16 +718,22 @@ export default function CheckoutPage() {
                                 Razorpay
                               </div>
                               <div>
-                                <Label htmlFor="razorpay" className="text-base font-medium cursor-pointer group-hover:text-primary transition-colors">
+                                <Label htmlFor="razorpay" className={`text-base font-medium cursor-pointer transition-colors ${
+                                  field.value === 'razorpay' ? 'text-primary' : 'text-gray-900'
+                                }`}>
                                   Pay with Razorpay
                                 </Label>
-                                <p className="text-sm text-muted-foreground group-hover:text-muted-foreground/80 transition-colors">
+                                <p className={`text-sm transition-colors ${
+                                  field.value === 'razorpay' ? 'text-primary/70' : 'text-muted-foreground'
+                                }`}>
                                   Popular payment gateway
                                 </p>
                               </div>
                             </div>
-                            <CreditCard className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                          </motion.div>
+                            <CreditCard className={`h-5 w-5 transition-colors ${
+                              field.value === 'razorpay' ? 'text-primary' : 'text-muted-foreground'
+                            }`} />
+                          </div>
                         </RadioGroup>
                       </FormControl>
                       <FormMessage />
@@ -721,8 +802,8 @@ export default function CheckoutPage() {
                   whileHover={{ scale: 1.05 }}
                   className="flex items-center gap-2"
                 >
-                  Complete Purchase
-                  <Check className="h-5 w-5" />
+                  Proceed to Payment
+                  {/* <Check className="h-5 w-5" /> */}
                 </motion.span>
               </Button>
 

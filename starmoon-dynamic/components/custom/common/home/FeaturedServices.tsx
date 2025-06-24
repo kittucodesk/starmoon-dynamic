@@ -75,7 +75,7 @@ const transformServiceData = (apiService: ApiService): Service => {
     description: apiService.service_description,
     image: apiService.service_thumb_image.startsWith('http') 
       ? apiService.service_thumb_image 
-      : `${process.env.NEXT_PUBLIC_DOMAIN_URL || ''}${apiService.service_thumb_image}`,
+      : `${process.env.NEXT_PUBLIC_DOMAIN_URL}${apiService.service_thumb_image}`,
     price: getPrice(),
     features: getFeatures(),
     icon: apiService.service_category.toLowerCase().replace(/\s+/g, '-') // Generate icon based on category

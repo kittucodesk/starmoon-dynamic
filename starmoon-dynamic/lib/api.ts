@@ -32,6 +32,61 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
+// Authentication Types
+export interface SignupRequest {
+  email: string;
+  mobile_number: string;
+  name: string;
+  profile_image?: string;
+  password: string;
+  country?: string;
+  additional_info?: {
+    state?: string;
+  };
+}
+
+export interface SigninRequest {
+  login: string;
+  password: string;
+}
+
+export interface SignupResponse {
+  meta: {
+    status: boolean;
+    message: string;
+  };
+  data: {
+    id: number;
+    email: string;
+    mobile_number: string;
+    name: string;
+    user_type: string;
+    message: string;
+  };
+}
+
+export interface AuthResponse {
+  meta: {
+    status: boolean;
+    message: string;
+  };
+  data: {
+    status: boolean;
+    token: string;
+    user: {
+      id: number;
+      email: string;
+      mobile_number: string;
+      name: string;
+      country: string;
+      user_types: Array<{
+        id: number;
+        name: string;
+      }>;
+    };
+  };
+}
+
 // Extended API Types for your endpoints
 export interface HeaderMenuItem {
   id: number;
@@ -332,16 +387,16 @@ export interface CouponRequest {
 }
 
 export interface CouponResponse {
-  success: boolean;
+  coupon_code: string;
+  coupon_title: string;
+  discount_type: 'percentage' | 'fixed';
+  discount_value: number;
+  original_amount: string;
   discount_amount: number;
   final_amount: number;
-  coupon_details: {
-    code: string;
-    discount_type: 'percentage' | 'fixed';
-    discount_value: number;
-    max_discount?: number;
-    min_order_amount?: number;
-  };
+  savings: number;
+  valid_products: string[];
+  valid_services: string[];
 }
 
 export interface ActiveCoupon {
@@ -385,7 +440,7 @@ export interface ProductListingParams {
 }
 
 // Base URL from environment variable
-const API_BASE_URL = process.env.NEXT_PUBLIC_DOMAIN_URL || 'https://atapp.ecom.ind.in';
+const API_BASE_URL = process.env.NEXT_PUBLIC_DOMAIN_URL;
 
 // Helper function to handle API requests with proper error handling
 async function apiRequest<T>(
@@ -393,7 +448,7 @@ async function apiRequest<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
-  
+
   const defaultOptions: RequestInit = {
     cache: 'no-store',
     headers: {
@@ -405,7 +460,7 @@ async function apiRequest<T>(
 
   try {
     const response = await fetch(url, defaultOptions);
-    
+
     if (!response.ok) {
       throw new Error(`API request failed: ${response.status} ${response.statusText}`);
     }
@@ -517,10 +572,10 @@ export async function fetchServices(country: string = 'India', params?: ServiceL
         }
       });
     }
-    
+
     const queryString = queryParams.toString();
     const endpoint = `/api/v1/service/country-wise-list/${country}${queryString ? `?${queryString}` : ''}`;
-    
+
     const response = await apiRequest<ApiResponse<Service[]>>(endpoint);
     return response.data;
   } catch (error) {
@@ -540,10 +595,10 @@ export async function fetchPublicProducts(country: string = 'India', params?: Pr
         }
       });
     }
-    
+
     const queryString = queryParams.toString();
     const endpoint = `/api/v1/products/country-wise-list/${country}${queryString ? `?${queryString}` : ''}`;
-    
+
     const response = await apiRequest<{ data: DetailedProduct[] }>(endpoint);
     return response.data || [];
   } catch (error) {
@@ -575,13 +630,30 @@ export async function fetchServiceById(id: string): Promise<DetailedService> {
 }
 
 // 13. Apply Coupon API
-export async function applyCoupon(couponData: CouponRequest): Promise<CouponResponse> {
+export async function applyCoupon(couponData: CouponRequest, token?: string): Promise<CouponResponse> {
   try {
-    const response = await apiRequest<CouponResponse>('/api/v1/offers/apply-coupon', {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Add Authorization header if token is provided
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    const response = await apiRequest<any>('/api/v1/offers/apply-coupon', {
       method: 'POST',
+      headers,
       body: JSON.stringify(couponData),
     });
-    return response;
+    
+    // Check if the response has the meta structure
+    if (response.meta && response.data) {
+      return response.data as CouponResponse;
+    }
+    
+    // Fallback to direct response structure
+    return response as CouponResponse;
   } catch (error) {
     console.error('Failed to apply coupon:', error);
     throw error;
@@ -629,4 +701,32 @@ export async function updateUserProfile(token: string, profileData: Partial<User
     console.error('Failed to update user profile:', error);
     throw error;
   }
-} 
+}
+
+// 15. Customer Signup API
+export async function signupCustomer(signupData: SignupRequest): Promise<SignupResponse> {
+  try {
+    const response = await apiRequest<SignupResponse>('/api/v1/auth/customer/signup', {
+      method: 'POST',
+      body: JSON.stringify(signupData),
+    });
+    return response;
+  } catch (error) {
+    console.error('Failed to signup customer:', error);
+    throw error;
+  }
+}
+
+// 16. Customer Signin API
+export async function signinCustomer(signinData: SigninRequest): Promise<AuthResponse> {
+  try {
+    const response = await apiRequest<AuthResponse>('/api/v1/auth/customer/signin_password', {
+      method: 'POST',
+      body: JSON.stringify(signinData),
+    });
+    return response;
+  } catch (error) {
+    console.error('Failed to signin customer:', error);
+    throw error;
+  }
+}  

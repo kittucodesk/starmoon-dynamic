@@ -58,7 +58,7 @@ export default function ProductsClient({ products: initialProducts, categories, 
     });
   }, [dynamicFilters]);
 
-  const [priceRange, setPriceRange] = useState([0, 200])
+  const [priceRange, setPriceRange] = useState([0, 100000])
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [priceInputError, setPriceInputError] = useState<string | null>(null)
@@ -69,7 +69,7 @@ export default function ProductsClient({ products: initialProducts, categories, 
   const [minPrice, maxPrice] = priceRange
 
   const MIN_PRICE = 0
-  const MAX_PRICE = 1000
+  const MAX_PRICE = 1000000
 
   // Transform DetailedProduct to Product interface
   const transformDetailedProductToProduct = (detailedProduct: DetailedProduct): Product | null => {
@@ -100,7 +100,7 @@ export default function ProductsClient({ products: initialProducts, categories, 
       price: price,
       image: detailedProduct.product_thumb_image?.startsWith('http')
         ? detailedProduct.product_thumb_image
-        : `${process.env.NEXT_PUBLIC_DOMAIN_URL || ''}${detailedProduct.product_thumb_image || '/placeholder.svg'}`,
+        : `${process.env.NEXT_PUBLIC_DOMAIN_URL}${detailedProduct.product_thumb_image || '/placeholder.svg'}`,
       category: detailedProduct.product_category || 'Uncategorized',
       type: "Software",
       downloads: Math.floor(Math.random() * 1000) + 100, // Random downloads
@@ -171,11 +171,11 @@ export default function ProductsClient({ products: initialProducts, categories, 
   // Ensure client-side rendering
   useEffect(() => {
     setIsClient(true);
-    console.log('🌍 Environment check:', {
-      DOMAIN_URL: process.env.NEXT_PUBLIC_DOMAIN_URL,
-      NODE_ENV: process.env.NODE_ENV,
-      initialProductsCount: initialProducts.length
-    });
+    // console.log('🌍 Environment check:', {
+    //   DOMAIN_URL: process.env.NEXT_PUBLIC_DOMAIN_URL,
+    //   NODE_ENV: process.env.NODE_ENV,
+    //   initialProductsCount: initialProducts.length
+    // });
   }, []);
 
   const sortOptions = [
@@ -364,8 +364,8 @@ export default function ProductsClient({ products: initialProducts, categories, 
                     <Slider
                       value={priceRange}
                       onValueChange={setPriceRange}
-                      max={MAX_PRICE}
                       min={MIN_PRICE}
+                      max={MAX_PRICE}
                       step={10}
                       className="mb-4"
                     />
@@ -533,7 +533,7 @@ export default function ProductsClient({ products: initialProducts, categories, 
                             src={product.image}
                             alt={product.name}
                             fill
-                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            className="object-contain group-hover:scale-105 transition-transform duration-300"
                           />
                           {product.sale && (
                             <Badge className="absolute top-3 right-3 bg-orange-500 text-white text-xs px-2 py-1 rounded-md">
@@ -569,7 +569,7 @@ export default function ProductsClient({ products: initialProducts, categories, 
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex flex-col">
                             <span className="text-2xl font-bold text-primary">
-                              ${product.price}
+                              {product.currency || "INR"}{product.price}
                             </span>
                             <span className="text-xs text-gray-500">
                               {product.downloads} downloads

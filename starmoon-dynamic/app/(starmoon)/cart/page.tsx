@@ -9,118 +9,105 @@ import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Card, CardContent } from "@/components/ui/card"
-
-// Mock data for cart items
-const initialCartItems = [
-    {
-        id: 1,
-        name: "Cloud Security Suite",
-        type: "Pro Version - Annual Subscription",
-        image: "/placeholder.svg?height=80&width=80",
-        unitPrice: 299.99,
-        quantity: 2,
-        isSubscription: true,
-        period: "year",
-    },
-    {
-        id: 2,
-        name: "Developer API Access",
-        type: "API Credits (10,000 units)",
-        image: "/placeholder.svg?height=80&width=80",
-        unitPrice: 149.5,
-        quantity: 1,
-        isSubscription: false,
-    },
-    {
-        id: 3,
-        name: "Enterprise Support Plan",
-        type: "Premium Support - 24/7 Access",
-        image: "/placeholder.svg?height=80&width=80",
-        unitPrice: 499.99,
-        quantity: 1,
-        isSubscription: true,
-        period: "month",
-    },
-]
-
-// Mock data for cross-sell items
-const crossSellItems = [
-    {
-        id: 101,
-        name: "Security Training Module",
-        image: "/placeholder.svg?height=100&width=100",
-        price: 79.99,
-        description: "Comprehensive security training for your team",
-    },
-    {
-        id: 102,
-        name: "Data Backup Add-on",
-        image: "/placeholder.svg?height=100&width=100",
-        price: 49.99,
-        description: "Automated cloud backup solution",
-    },
-    {
-        id: 103,
-        name: "Advanced Analytics Package",
-        image: "/placeholder.svg?height=100&width=100",
-        price: 129.99,
-        description: "Enhanced reporting and insights",
-    },
-]
+import { useAppSelector, useAppDispatch } from "@/lib/store/hooks"
+import { removeFromCart, updateQuantity, addToCart } from "@/lib/store/slices/cartSlice"
+import { applyCoupon, CouponRequest, CouponResponse } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 
 export default function CartPage() {
-    const [cartItems, setCartItems] = useState(initialCartItems)
+    const dispatch = useAppDispatch()
+    const { items: cartItems, totalAmount } = useAppSelector((state) => state.cart)
+    const { token } = useAppSelector((state) => state.auth)
     const [promoCode, setPromoCode] = useState("")
-    const [appliedPromo, setAppliedPromo] = useState<null | { code: string; discount: number }>(null)
+    const [appliedCoupon, setAppliedCoupon] = useState<CouponResponse | null>(null)
     const [promoError, setPromoError] = useState("")
+    const [isApplyingCoupon, setIsApplyingCoupon] = useState(false)
+    const { toast } = useToast()
 
     // Calculate cart totals
-    const subtotal = cartItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
-    const discountAmount = appliedPromo ? appliedPromo.discount : 0
-    const taxEstimate = (subtotal - discountAmount) * 0.08 // 8% tax estimate
-    const total = subtotal - discountAmount + taxEstimate
+    const subtotal = totalAmount
+    const discountAmount = appliedCoupon ? appliedCoupon.discount_amount : 0
+    const taxEstimate = (subtotal - discountAmount) * 0.00 // 8% tax estimate
+    const total = appliedCoupon ? appliedCoupon.final_amount + taxEstimate : subtotal + taxEstimate
 
     // Handle quantity change
-    const updateQuantity = (id: number, newQuantity: number) => {
+    const handleUpdateQuantity = (id: string, newQuantity: number) => {
         if (newQuantity < 1) return
-        setCartItems(cartItems.map((item) => (item.id === id ? { ...item, quantity: newQuantity } : item)))
+        dispatch(updateQuantity({ id, quantity: newQuantity }))
     }
 
     // Handle item removal
-    const removeItem = (id: number) => {
-        setCartItems(cartItems.filter((item) => item.id !== id))
-    }
-
-    // Handle promo code application
-    const applyPromoCode = () => {
-        // Mock promo code validation
-        if (promoCode.toUpperCase() === "SAVE20") {
-            setAppliedPromo({ code: "SAVE20", discount: subtotal * 0.2 })
-            setPromoError("")
-        } else if (promoCode.toUpperCase() === "NEWUSER") {
-            setAppliedPromo({ code: "NEWUSER", discount: 25 })
-            setPromoError("")
-        } else {
-            setPromoError("Invalid promo code")
-            setAppliedPromo(null)
+    const handleRemoveItem = (id: string) => {
+        dispatch(removeFromCart(id))
+        // Reset coupon if cart changes
+        if (appliedCoupon) {
+            setAppliedCoupon(null)
+            setPromoCode("")
         }
     }
 
-    // Add cross-sell item to cart
-    const addCrossSellItem = (item: (typeof crossSellItems)[0]) => {
-        setCartItems([
-            ...cartItems,
-            {
-                id: item.id,
-                name: item.name,
-                type: "Standard License",
-                image: item.image,
-                unitPrice: item.price,
-                quantity: 1,
-                isSubscription: false,
-            },
-        ])
+    // Handle coupon application using API
+    const applyPromoCode = async () => {
+        if (!promoCode.trim()) {
+            setPromoError("Please enter a coupon code")
+            return
+        }
+
+        if (cartItems.length === 0) {
+            setPromoError("Cannot apply coupon to empty cart")
+            return
+        }
+
+        // Optional: Check if user is logged in for token-required coupons
+        // if (!token) {
+        //     setPromoError("Please log in to apply coupon codes")
+        //     return
+        // }
+
+        setIsApplyingCoupon(true)
+        setPromoError("")
+
+        try {
+            // Prepare API request data
+            const couponRequest: CouponRequest = {
+                coupon_code: promoCode.trim(),
+                order_amount: subtotal,
+                product_ids: cartItems.map(item => item.id)
+            }
+
+            // Call the API with token
+            const response = await applyCoupon(couponRequest, token || undefined)
+
+            // API response will always be successful if no error is thrown
+            setAppliedCoupon(response)
+            setPromoError("")
+            toast({
+                title: "Coupon Applied Successfully!",
+                description: `${response.coupon_title} - You saved ₹${response.discount_amount.toFixed(2)} with code ${response.coupon_code}`,
+            })
+        } catch (error) {
+            console.error("Coupon application error:", error)
+            setPromoError("Failed to apply coupon. Please try again.")
+            setAppliedCoupon(null)
+            toast({
+                title: "Coupon Application Failed",
+                description: "Please check your coupon code and try again.",
+                variant: "destructive"
+            })
+        } finally {
+            setIsApplyingCoupon(false)
+        }
+    }
+
+    // Remove applied coupon
+    const removeCoupon = () => {
+        setAppliedCoupon(null)
+        setPromoCode("")
+        setPromoError("")
+        toast({
+            title: "Coupon Removed",
+            description: "Coupon has been removed from your order.",
+        })
     }
 
     return (
@@ -171,20 +158,17 @@ export default function CartPage() {
                                                 <div className="flex flex-col sm:flex-row sm:justify-between gap-2">
                                                     <div>
                                                         <h3 className="font-medium text-lg">{item.name}</h3>
-                                                        <p className="text-muted-foreground text-sm">{item.type}</p>
-                                                        {item.isSubscription && (
-                                                            <Badge variant="outline" className="mt-1">
-                                                                Subscription (per {item.period})
-                                                            </Badge>
-                                                        )}
+                                                        <p className="text-muted-foreground text-sm">
+                                                            {item.type === 'product' ? 'Product' : 'Service'}
+                                                        </p>
+                                                        <Badge variant="outline" className="mt-1">
+                                                            {item.type === 'product' ? 'Product' : 'Service'}
+                                                        </Badge>
                                                     </div>
 
                                                     <div className="text-right">
                                                         <div className="font-medium">
-                                                            ${item.unitPrice.toFixed(2)}
-                                                            {item.isSubscription && (
-                                                                <span className="text-xs text-muted-foreground">/{item.period}</span>
-                                                            )}
+                                                            ₹{item.price.toFixed(2)}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -195,7 +179,7 @@ export default function CartPage() {
                                                             variant="outline"
                                                             size="icon"
                                                             className="h-8 w-8 rounded-r-none"
-                                                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                                            onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
                                                             disabled={item.quantity <= 1}
                                                         >
                                                             <Minus className="h-3 w-3" />
@@ -205,7 +189,7 @@ export default function CartPage() {
                                                             variant="outline"
                                                             size="icon"
                                                             className="h-8 w-8 rounded-l-none"
-                                                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                                            onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
                                                         >
                                                             <Plus className="h-3 w-3" />
                                                         </Button>
@@ -213,7 +197,7 @@ export default function CartPage() {
 
                                                     <div className="flex items-center gap-3">
                                                         <div className="font-medium text-right min-w-[80px]">
-                                                            ${(item.unitPrice * item.quantity).toFixed(2)}
+                                                            ₹{(item.price * item.quantity).toFixed(2)}
                                                         </div>
                                                         <div className="flex gap-2">
                                                             <Button
@@ -227,7 +211,7 @@ export default function CartPage() {
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                                                onClick={() => removeItem(item.id)}
+                                                                onClick={() => handleRemoveItem(item.id)}
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
                                                             </Button>
@@ -238,30 +222,6 @@ export default function CartPage() {
                                         </div>
                                     ))}
                                 </div>
-                            </div>
-                        </div>
-
-                        {/* Cross-sell Section */}
-                        <div className="mt-8">
-                            <h2 className="text-xl font-semibold mb-4">Enhance your purchase</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {crossSellItems.map((item) => (
-                                    <Card key={item.id} className="overflow-hidden">
-                                        <div className="aspect-video relative bg-muted">
-                                            <Image src={item.image || "/placeholder.svg"} alt={item.name} fill className="object-cover" />
-                                        </div>
-                                        <CardContent className="p-4">
-                                            <h3 className="font-medium mb-1">{item.name}</h3>
-                                            <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{item.description}</p>
-                                            <div className="flex justify-between items-center">
-                                                <span className="font-medium">${item.price.toFixed(2)}</span>
-                                                <Button variant="secondary" size="sm" onClick={() => addCrossSellItem(item)}>
-                                                    Add to Cart
-                                                </Button>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
                             </div>
                         </div>
                     </div>
@@ -275,47 +235,72 @@ export default function CartPage() {
                                 <div className="space-y-4">
                                     <div className="flex justify-between">
                                         <span className="text-muted-foreground">Subtotal</span>
-                                        <span>${subtotal.toFixed(2)}</span>
+                                        <span>₹{subtotal.toFixed(2)}</span>
                                     </div>
 
-                                    {appliedPromo && (
+                                    {appliedCoupon && (
                                         <div className="flex justify-between text-green-600">
-                                            <span>Discount ({appliedPromo.code})</span>
-                                            <span>-${discountAmount.toFixed(2)}</span>
+                                            <span>Discount ({appliedCoupon.coupon_code})</span>
+                                            <span>-₹{discountAmount.toFixed(2)}</span>
                                         </div>
                                     )}
 
                                     <div className="flex justify-between">
                                         <span className="text-muted-foreground">Estimated Tax</span>
-                                        <span>${taxEstimate.toFixed(2)}</span>
+                                        <span>₹{taxEstimate.toFixed(2)}</span>
                                     </div>
 
                                     <Separator />
 
                                     <div className="flex justify-between font-semibold text-lg">
                                         <span>Total</span>
-                                        <span>${total.toFixed(2)}</span>
+                                        <span>₹{total.toFixed(2)}</span>
                                     </div>
 
                                     <div className="pt-2">
                                         <div className="flex gap-2 mb-1">
                                             <Input
-                                                placeholder="Promo code or gift card"
+                                                placeholder="Enter coupon code"
                                                 value={promoCode}
                                                 onChange={(e) => setPromoCode(e.target.value)}
+                                                disabled={isApplyingCoupon}
+                                                onKeyPress={(e) => e.key === 'Enter' && applyPromoCode()}
                                             />
-                                            <Button variant="outline" onClick={applyPromoCode} disabled={!promoCode}>
-                                                Apply
+                                            <Button
+                                                variant="outline"
+                                                onClick={applyPromoCode}
+                                                disabled={!promoCode.trim() || isApplyingCoupon}
+                                            >
+                                                {isApplyingCoupon ? "Applying..." : "Apply"}
                                             </Button>
                                         </div>
 
                                         {promoError && <p className="text-destructive text-sm">{promoError}</p>}
 
-                                        {appliedPromo && <p className="text-green-600 text-sm">Promo code applied successfully!</p>}
+                                        {appliedCoupon && (
+                                            <div className="flex items-center justify-between text-green-600 text-sm bg-green-50 p-2 rounded">
+                                                <span>
+                                                    {appliedCoupon.discount_type === 'percentage'
+                                                        ? `${appliedCoupon.discount_value}% discount applied!`
+                                                        : `₹${appliedCoupon.discount_value} discount applied!`
+                                                    }
+                                                </span>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={removeCoupon}
+                                                    className="text-green-600 hover:text-green-700 p-1 h-auto"
+                                                >
+                                                    Remove
+                                                </Button>
+                                            </div>
+                                        )}
                                     </div>
 
-                                    <Button className="w-full" size="lg">
-                                        Proceed to Checkout
+                                    <Button className="w-full" size="lg" asChild>
+                                        <Link href="/checkout">
+                                            Proceed to Checkout
+                                        </Link>
                                     </Button>
 
                                     <div className="text-center">
@@ -331,7 +316,7 @@ export default function CartPage() {
                                         <span>SSL Encrypted</span>
                                     </div>
 
-                                    <Alert variant="outline" className="bg-muted/50 mt-4">
+                                    <Alert className="bg-muted/50 mt-4">
                                         <AlertDescription className="text-xs text-muted-foreground">
                                             Software licenses will be assigned to your account immediately after purchase. Services will be
                                             available through your dashboard.

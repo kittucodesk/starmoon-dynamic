@@ -1,14 +1,86 @@
+"use client"
+
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { signinCustomer, SigninRequest, AuthResponse } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks"
+import { loginStart, loginSuccess, loginFailure } from "@/lib/store/slices/authSlice"
 
 export function LoginForm({
     className,
     ...props
 }: React.ComponentProps<"form">) {
+    const [formData, setFormData] = useState<SigninRequest>({
+        login: "",
+        password: "",
+    })
+    const router = useRouter()
+    const { toast } = useToast()
+    
+    // Redux state and actions
+    const dispatch = useAppDispatch()
+    const { loading: isLoading, error } = useAppSelector(state => state.auth)
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }))
+    }
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        dispatch(loginStart())
+
+        try {
+            const response: AuthResponse = await signinCustomer(formData)
+            
+            if (response.meta.status) {
+                dispatch(loginSuccess({
+                    user: {
+                        id: response.data.user.id,
+                        name: response.data.user.name,
+                        email: response.data.user.email,
+                        user_type: response.data.user.user_types[0]?.name || 'CUSTOMER'
+                    },
+                    token: response.data.token
+                }))
+                
+                toast({
+                    title: "Login Successful",
+                    description: response.meta.message || "Welcome back!",
+                })
+                
+                // Redirect to dashboard or home
+                router.push("/")
+            } else {
+                dispatch(loginFailure(response.meta.message || "Invalid credentials"))
+                toast({
+                    title: "Login Failed",
+                    description: response.meta.message || "Invalid credentials",
+                    variant: "destructive",
+                })
+            }
+        } catch (error) {
+            const errorMessage = "An error occurred during login. Please try again."
+            dispatch(loginFailure(errorMessage))
+            console.error("Login error:", error)
+            toast({
+                title: "Login Failed",
+                description: errorMessage,
+                variant: "destructive",
+            })
+        }
+    }
+
     return (
-        <form className={cn("flex flex-col gap-6", className)} {...props}>
+        <form className={cn("flex flex-col gap-6", className)} onSubmit={handleSubmit} {...props}>
             <div className="flex flex-col items-center gap-2 text-center">
                 <h1 className="text-2xl font-bold">Login to your account</h1>
                 <p className="text-muted-foreground text-sm text-balance">
@@ -17,8 +89,17 @@ export function LoginForm({
             </div>
             <div className="grid gap-3">
                 <div className="grid gap-3">
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" placeholder="m@example.com" required />
+                    <Label htmlFor="login">Email</Label>
+                    <Input 
+                        id="login" 
+                        name="login"
+                        type="email" 
+                        placeholder="m@example.com" 
+                        value={formData.login}
+                        onChange={handleInputChange}
+                        required 
+                        disabled={isLoading}
+                    />
                 </div>
                 <div className="grid gap-3">
                     <div className="flex items-center">
@@ -30,10 +111,18 @@ export function LoginForm({
                             Forgot your password?
                         </a>
                     </div>
-                    <Input id="password" type="password" required />
+                    <Input 
+                        id="password" 
+                        name="password"
+                        type="password" 
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        required 
+                        disabled={isLoading}
+                    />
                 </div>
-                <Button type="submit" className="w-full">
-                    Login
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? "Signing in..." : "Login"}
                 </Button>
                 <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
                     <span className="bg-card text-muted-foreground relative z-10 px-2">

@@ -55,7 +55,7 @@ const extractPrice = (service: Service): { price: number; originalPrice?: number
         // Find the most popular plan or first plan
         const mostPopular = service.service_features_and_offers.find(plan => plan.is_most_popular);
         const selectedPlan = mostPopular || service.service_features_and_offers[0];
-        
+
         if (selectedPlan.country_price.length > 0) {
             const indiaPrice = selectedPlan.country_price.find(p => p.country === 'India') || selectedPlan.country_price[0];
             return {
@@ -64,7 +64,7 @@ const extractPrice = (service: Service): { price: number; originalPrice?: number
             };
         }
     }
-    
+
     // Fallback pricing
     return { price: 1000 };
 };
@@ -77,24 +77,24 @@ const generateRating = (service: Service): { rating: number; reviews: number } =
         a = ((a << 5) - a) + b.charCodeAt(0);
         return a & a;
     }, 0);
-    
+
     const rating = 3.5 + (Math.abs(hash) % 15) / 10; // Rating between 3.5 and 5.0
     const reviews = 50 + (Math.abs(hash) % 200); // Reviews between 50 and 250
-    
+
     return { rating: Math.round(rating * 10) / 10, reviews };
 };
 
 // Helper function to determine service level
 const getServiceLevel = (service: Service): string => {
-    const hasEnterpriseFeatures = service.service_features_and_offers.some(plan => 
-        plan.features.some(feature => 
-            feature.name.toLowerCase().includes('enterprise') || 
+    const hasEnterpriseFeatures = service.service_features_and_offers.some(plan =>
+        plan.features.some(feature =>
+            feature.name.toLowerCase().includes('enterprise') ||
             feature.name.toLowerCase().includes('advanced')
         )
     );
-    
+
     if (hasEnterpriseFeatures) return 'Enterprise';
-    
+
     const priceInfo = extractPrice(service);
     return priceInfo.price > 3000 ? 'Enterprise' : 'Professional';
 };
@@ -117,23 +117,23 @@ const transformServiceData = (service: Service): TransformedService => {
     const priceInfo = extractPrice(service);
     const ratingInfo = generateRating(service);
     const level = getServiceLevel(service);
-    
+
     // Get duration from dynamic filters or default
     const duration = service.dynamic_filters.find(f => f.filter_name === 'duration')?.filter_value || '4-6 weeks';
-    
+
     // Extract best for from dynamic filters
     const bestFor = service.dynamic_filters
         .filter(f => f.filter_name === 'best_for')
         .map(f => f.filter_value);
-    
+
     // Extract features from service features and offers
-    const features = service.service_features_and_offers.flatMap(plan => 
+    const features = service.service_features_and_offers.flatMap(plan =>
         plan.features.filter(f => f.is_included).map(f => f.name)
     );
-    
+
     // Determine plan type
     const planType = service.is_pay_as_you_go ? 'subscription' : 'annual';
-    
+
     return {
         id: service._id,
         title: service.service_name,
@@ -144,9 +144,7 @@ const transformServiceData = (service: Service): TransformedService => {
         duration,
         rating: ratingInfo.rating,
         reviews: ratingInfo.reviews,
-        image: service.service_thumb_image.startsWith('http') 
-            ? service.service_thumb_image 
-            : `https://atapp.ecom.ind.in${service.service_thumb_image}`,
+        image: `${process.env.NEXT_PUBLIC_DOMAIN_URL}${service.service_thumb_image}`,
         icon: getCategoryIcon(service.service_category),
         tags: service.tags,
         level,
@@ -161,12 +159,12 @@ const transformServiceData = (service: Service): TransformedService => {
 // Helper function to count active filters
 const getActiveFilterCount = (selectedFilters: Record<string, string[]>): number => {
     let count = 0;
-    
+
     // Count dynamic filters
     Object.values(selectedFilters).forEach(filterValues => {
         count += filterValues.length;
     });
-    
+
     return count;
 };
 
@@ -174,7 +172,7 @@ export default function ServicesClient({ initialServices, dynamicFilters }: Serv
     const router = useRouter();
     const [services, setServices] = useState<Service[]>(initialServices);
     const [loading, setLoading] = useState(false);
-    
+
     // Transform services for UI
     const transformedServices = useMemo(() => {
         return services.filter(service => service.is_active).map(transformServiceData);
@@ -183,7 +181,7 @@ export default function ServicesClient({ initialServices, dynamicFilters }: Serv
     // Extract filter options from dynamic filters
     const filterSections = useMemo(() => {
         const sections: Record<string, { title: string; options: { label: string; _id: string }[] }> = {};
-        
+
         dynamicFilters.forEach(filter => {
             filter.sections.forEach(section => {
                 const sectionKey = section.title.toLowerCase().replace(/\s+/g, '_');
@@ -193,7 +191,7 @@ export default function ServicesClient({ initialServices, dynamicFilters }: Serv
                 };
             });
         });
-        
+
         return sections;
     }, [dynamicFilters]);
 
@@ -211,7 +209,7 @@ export default function ServicesClient({ initialServices, dynamicFilters }: Serv
     const [priceFilterRange, setPriceFilterRange] = useState<[number, number]>([priceRange.min, priceRange.max])
     const [sortBy, setSortBy] = useState<string>(sortOptions[0].value)
     const [search, setSearch] = useState<string>("")
-    
+
     // Legacy filter states for backward compatibility
     const [filters, setFilters] = useState({
         rating: { rating4: false, rating3: false },
@@ -233,14 +231,14 @@ export default function ServicesClient({ initialServices, dynamicFilters }: Serv
     }, [filterSections]);
 
     // Extract specific filter options for UI
-    const businessTypes = filterSections.best_for?.options.map(opt => opt.label) || 
-        filterSections.business_type?.options.map(opt => opt.label) || 
+    const businessTypes = filterSections.best_for?.options.map(opt => opt.label) ||
+        filterSections.business_type?.options.map(opt => opt.label) ||
         ["Small businesses", "Marketing agencies", "Marketers", "Content creators", "Ecommerce"];
-    
-    const serviceFeatures = filterSections.features?.options.map(opt => opt.label) || 
-        filterSections.service_features?.options.map(opt => opt.label) || 
+
+    const serviceFeatures = filterSections.features?.options.map(opt => opt.label) ||
+        filterSections.service_features?.options.map(opt => opt.label) ||
         ["GDPR-compliant", "AI", "White label", "CNAME"];
-    
+
     const planTypes = filterSections.plan_type?.options.map(opt => ({ name: opt.label, value: opt.label.toLowerCase().replace(/\s+/g, '_') })) || [
         { name: "All", value: "all" },
         { name: "Lifetime deal", value: "lifetime" },
@@ -249,8 +247,8 @@ export default function ServicesClient({ initialServices, dynamicFilters }: Serv
     ];
 
     // Add "All" option to plan types if not present
-    const allPlanTypes = planTypes.find(pt => pt.value === "all") 
-        ? planTypes 
+    const allPlanTypes = planTypes.find(pt => pt.value === "all")
+        ? planTypes
         : [{ name: "All", value: "all" }, ...planTypes];
 
     const [selectedPlanType, setSelectedPlanType] = useState<string>("all");
@@ -274,21 +272,21 @@ export default function ServicesClient({ initialServices, dynamicFilters }: Serv
                             case 'service_category':
                                 matches = selectedValues.includes(s.category);
                                 break;
-                            
+
                             case 'best_for':
                             case 'business_type':
                                 matches = selectedValues.some(value => s.bestFor.includes(value));
                                 break;
-                            
+
                             case 'features':
                             case 'service_features':
                                 matches = selectedValues.some(value => s.features.includes(value) || s.tags.includes(value));
                                 break;
-                            
+
                             case 'tags':
                                 matches = selectedValues.some(value => s.tags.includes(value));
                                 break;
-                            
+
                             case 'level':
                             case 'service_level':
                                 matches = selectedValues.includes(s.level);
@@ -315,7 +313,7 @@ export default function ServicesClient({ initialServices, dynamicFilters }: Serv
                                     return false;
                                 });
                                 break;
-                            
+
                             default:
                                 // Generic dynamic filter matching
                                 const dynamicFilterValues = originalService.dynamic_filters
@@ -392,7 +390,7 @@ export default function ServicesClient({ initialServices, dynamicFilters }: Serv
             const newValues = currentValues.includes(value)
                 ? currentValues.filter(v => v !== value)
                 : [...currentValues, value];
-            
+
             return {
                 ...prev,
                 [filterKey]: newValues

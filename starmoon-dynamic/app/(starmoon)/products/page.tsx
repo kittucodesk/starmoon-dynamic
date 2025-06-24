@@ -106,7 +106,7 @@ const transformDetailedProductToProduct = (detailedProduct: DetailedProduct): Pr
     price: price,
     image: detailedProduct.product_thumb_image?.startsWith('http') 
       ? detailedProduct.product_thumb_image 
-      : `${process.env.NEXT_PUBLIC_DOMAIN_URL || ''}${detailedProduct.product_thumb_image || '/placeholder.svg'}`,
+      : `${process.env.NEXT_PUBLIC_DOMAIN_URL}${detailedProduct.product_thumb_image || '/placeholder.svg'}`,
     category: detailedProduct.product_category || 'Uncategorized',
     type: "Software",
     downloads: Math.floor(Math.random() * 1000) + 100, // Random downloads
@@ -121,10 +121,10 @@ async function ProductsServerComponent() {
   
   try {
     console.log('Starting API fetch operations...');
-    console.log('Environment check:', {
-      DOMAIN_URL: process.env.NEXT_PUBLIC_DOMAIN_URL,
-      NODE_ENV: process.env.NODE_ENV
-    });
+    // console.log('Environment check:', {
+    //   DOMAIN_URL: process.env.NEXT_PUBLIC_DOMAIN_URL,
+    //   NODE_ENV: process.env.NODE_ENV
+    // });
     
     // Fetch products, categories, and dynamic filters from API
     const [detailedProducts, productCategories, filters] = await Promise.all([

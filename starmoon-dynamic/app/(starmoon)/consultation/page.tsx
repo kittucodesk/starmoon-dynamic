@@ -91,7 +91,7 @@ export default function ConsultationPage() {
   return (
           <div className="min-h-screen bg-background">
         {/* Header */}
-        <SiteHeader />
+        {/* <SiteHeader /> */}
 
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-blue-50 to-indigo-100 py-16">
