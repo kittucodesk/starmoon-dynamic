@@ -440,22 +440,24 @@ export function SiteHeader({
 
                                 {/* Featured Section */}
                                 <div className="col-span-4 space-y-8">
-                                  {menu.bannerImage && (
-                                    <div className="relative h-48 rounded-2xl overflow-hidden">
-                                      <Image
-                                        src={menu.bannerImage}
-                                        alt={menu.title}
-                                        fill
-                                        className="object-cover"
-                                      />
-                                      <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary/40 dark:from-slate-900/90 dark:to-slate-800/40" />
-                                      <div className="absolute bottom-0 left-0 p-6 text-white">
-                                        <h3 className="font-bold text-2xl mb-2">{menu.bannerTitle}</h3>
-                                        <p className="text-white/90 text-sm leading-relaxed">
-                                          {menu.bannerDescription}
-                                        </p>
+                                  {menu?.bannerImage && (
+                                    <Link href={`/${menu?.title.toLowerCase()}`}>
+                                      <div className="relative h-48 rounded-2xl overflow-hidden">
+                                        <Image
+                                          src={process.env.NEXT_PUBLIC_DOMAIN_URL + menu?.bannerImage}
+                                          alt={menu?.title}
+                                          fill
+                                          className="object-cover"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary/40 dark:from-slate-900/90 dark:to-slate-800/40" />
+                                        <div className="absolute bottom-0 left-0 p-6 text-white">
+                                          <h3 className="font-bold text-2xl mb-2">{menu?.bannerTitle}</h3>
+                                          <p className="text-white/90 text-sm leading-relaxed">
+                                            {menu?.bannerDescription}
+                                          </p>
+                                        </div>
                                       </div>
-                                    </div>
+                                    </Link>
                                   )}
 
                                   {/* Featured Products */}
@@ -674,7 +676,7 @@ export function SiteHeader({
                         </Link>
                       </DropdownMenuItem> */}
                       <DropdownMenuItem asChild>
-                        <Link href="/dashboard/customer" className="flex items-center">
+                        <Link href="/dashboard" className="flex items-center">
                           <Monitor className="mr-2 h-4 w-4" />
                           <span>Dashboard</span>
                         </Link>

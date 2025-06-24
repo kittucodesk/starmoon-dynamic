@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import Image from "next/image"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Badge } from "@/components/ui/badge"
@@ -17,6 +17,8 @@ import { useRouter } from "next/navigation"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { type Product, type DynamicFilter, type DynamicFilterSection, type DetailedProduct, fetchPublicProducts } from "@/lib/api"
+import { useAppDispatch } from "@/lib/store/hooks"
+import { addToCart } from "@/lib/store/slices/cartSlice"
 
 // Plan types for "Plan type" filter
 const planTypes = [
@@ -36,28 +38,11 @@ interface ProductsClientProps {
 
 export default function ProductsClient({ products: initialProducts, categories, dynamicFilters }: ProductsClientProps) {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const [isClient, setIsClient] = useState(false);
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Debug when products change
-  useEffect(() => {
-    console.log('📊 Products state changed:', {
-      count: products.length,
-      productNames: products.slice(0, 3).map(p => p.name),
-      timestamp: new Date().toISOString()
-    });
-  }, [products]);
-
-  // Debug logging for dynamic filters
-  useEffect(() => {
-    console.log('ProductsClient received dynamicFilters:', {
-      length: dynamicFilters?.length || 0,
-      isArray: Array.isArray(dynamicFilters),
-      data: dynamicFilters
-    });
-  }, [dynamicFilters]);
-
+  const isApiCallInProgress = useRef(false);
   const [priceRange, setPriceRange] = useState([0, 100000])
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
@@ -69,7 +54,7 @@ export default function ProductsClient({ products: initialProducts, categories, 
   const [minPrice, maxPrice] = priceRange
 
   const MIN_PRICE = 0
-  const MAX_PRICE = 1000000
+  const MAX_PRICE = 100000
 
   // Transform DetailedProduct to Product interface
   const transformDetailedProductToProduct = (detailedProduct: DetailedProduct): Product | null => {
@@ -85,11 +70,15 @@ export default function ProductsClient({ products: initialProducts, categories, 
       return null;
     }
 
-    const mostPopularPlan = detailedProduct.product_features_and_offers?.find(plan => plan?.is_most_popular);
+    // const mostPopularPlan = detailedProduct.product_features_and_offers?.find(plan => plan?.name === "Basic");
     const firstPlan = detailedProduct.product_features_and_offers?.[0];
-    const selectedPlan = mostPopularPlan || firstPlan;
-
-    const price = selectedPlan?.country_price?.[0]?.monthly_price || 0;
+    let price = 0;
+    const selectedPlan = firstPlan;
+    if (detailedProduct?.is_pay_as_you_go) {
+      price = selectedPlan?.pay_as_you_go_price[0] || 0;
+    } else if (detailedProduct?.is_product_features_and_offers) {
+      price = selectedPlan?.country_price?.[0]?.monthly_price || 0;
+    }
 
     const transformedProduct = {
       id: detailedProduct.id || parseInt(detailedProduct._id.slice(-8), 16),
@@ -111,31 +100,67 @@ export default function ProductsClient({ products: initialProducts, categories, 
     return transformedProduct;
   };
 
-  // Fetch products with filters
-  const fetchFilteredProducts = useCallback(async (filterName?: string, filterValue?: string) => {
-    console.log('🔍 Starting fetchFilteredProducts with:', { filterName, filterValue });
+  // Fetch products with comprehensive API filtering
+  const fetchProductsWithFilters = useCallback(async () => {
+    // Prevent multiple simultaneous API calls
+    if (isApiCallInProgress.current) {
+      console.log('⏸️ API call already in progress, skipping...');
+      return;
+    }
+
+    console.log('🔍 Starting API-based filtering with all current filters');
+    isApiCallInProgress.current = true;
     setIsLoading(true);
 
     try {
       const params: any = {};
 
-      if (filterName && filterValue) {
-        params.filter_name = filterName;
-        params.filter_value = filterValue;
-        console.log('📡 API params being sent:', params);
+      // Search filter
+      if (searchTerm.trim()) {
+        params.search = searchTerm.trim();
       }
 
-      console.log('🌐 Making API call to fetchPublicProducts...');
+      // Category filter
+      if (selectedCategories.length > 0) {
+        params.product_category = selectedCategories;
+      }
+
+      // Price range filter
+      if (minPrice > MIN_PRICE || maxPrice < MAX_PRICE) {
+        params.min_price = minPrice;
+        params.max_price = maxPrice;
+      }
+
+      // Dynamic filters - send all selected filters as arrays
+      const dynamicFilterEntries = Object.entries(selectedDynamicFilters);
+      if (dynamicFilterEntries.length > 0) {
+        // For multiple dynamic filters, you might need to adjust based on your API capability
+        // Option 1: Send first filter only (current approach)
+        const [filterName, filterValues] = dynamicFilterEntries[0];
+        if (filterValues.length > 0) {
+          params.filter_name = filterName;
+          params.filter_value = filterValues; // Send as array instead of single value
+        }
+
+        // Option 2: If your API supports multiple filter types simultaneously, you could do:
+        // dynamicFilterEntries.forEach(([filterName, filterValues]) => {
+        //   if (filterValues.length > 0) {
+        //     params[filterName.toLowerCase().replace(' ', '_')] = filterValues;
+        //   }
+        // });
+      }
+
+      console.log('📡 API params being sent:', params);
+
       const detailedProducts = await fetchPublicProducts('India', params);
 
       console.log('📦 Raw API response:', {
         isArray: Array.isArray(detailedProducts),
         length: detailedProducts?.length || 0,
-        firstItem: detailedProducts?.[0] ? Object.keys(detailedProducts[0]) : 'No items',
-        data: detailedProducts
+        firstItem: detailedProducts?.[0] ? Object.keys(detailedProducts[0]) : 'No items'
       });
 
-      if (detailedProducts && Array.isArray(detailedProducts) && detailedProducts.length > 0) {
+      if (detailedProducts && Array.isArray(detailedProducts)) {
         const activeProducts = detailedProducts.filter(product => product?.is_active);
         console.log('✅ Active products found:', activeProducts.length);
 
@@ -144,29 +169,71 @@ export default function ProductsClient({ products: initialProducts, categories, 
           .filter((product): product is Product => product !== null);
 
         console.log('🔄 Transformed products:', transformedProducts.length);
-        console.log('🔄 Sample transformed product:', transformedProducts[0]);
-
         setProducts(transformedProducts);
         console.log('✅ Products state updated with', transformedProducts.length, 'items');
       } else {
-        // If filtering and no results found, show empty state
-        if (filterName && filterValue) {
-          console.log('🔍 Filter applied but no products found - showing empty state');
-          setProducts([]);
-        } else {
-          // If no filter applied and no products, reset to initial products
-          console.log('⚠️ No filter applied and no products found, resetting to initial products');
-          setProducts(initialProducts);
-        }
+        console.log('📝 No products found with current filters');
+        setProducts([]);
       }
     } catch (error) {
       console.error('❌ Failed to fetch filtered products:', error);
+      // On error, show initial products as fallback
       setProducts(initialProducts);
     } finally {
       setIsLoading(false);
-      console.log('🏁 fetchFilteredProducts completed');
+      isApiCallInProgress.current = false;
+      console.log('🏁 fetchProductsWithFilters completed');
     }
-  }, [initialProducts]);
+  }, [searchTerm, selectedCategories, minPrice, maxPrice, selectedDynamicFilters, initialProducts, MIN_PRICE, MAX_PRICE]);
+
+  // Consolidated filtering effect with proper debouncing
+  useEffect(() => {
+    if (!isClient) return;
+
+    // Determine if we need debouncing based on what changed
+    const hasSearchChange = searchTerm.trim() !== '';
+    const hasPriceChange = minPrice > MIN_PRICE || maxPrice < MAX_PRICE;
+    const hasImmediateFilters = selectedCategories.length > 0 || Object.keys(selectedDynamicFilters).length > 0;
+
+    // If only search or price changed, use debouncing
+    if ((hasSearchChange || hasPriceChange) && !hasImmediateFilters) {
+      const debounceMs = hasSearchChange ? 500 : 800;
+
+      const timer = setTimeout(() => {
+        console.log('🔍 Debounced filter trigger:', {
+          searchTerm: hasSearchChange ? searchTerm : 'none',
+          priceRange: hasPriceChange ? { minPrice, maxPrice } : 'none'
+        });
+        fetchProductsWithFilters();
+      }, debounceMs);
+
+      return () => clearTimeout(timer);
+    }
+    // If categories or dynamic filters are selected, call immediately
+    else if (hasImmediateFilters) {
+      console.log('📂 Immediate filter trigger:', {
+        categories: selectedCategories,
+        dynamicFilters: Object.keys(selectedDynamicFilters)
+      });
+      fetchProductsWithFilters();
+    }
+    // If search and price are cleared and no other filters, show all products
+    else if (!hasSearchChange && !hasPriceChange && !hasImmediateFilters) {
+      console.log('🔄 All filters cleared, showing initial products');
+      setProducts(initialProducts);
+    }
+  }, [
+    searchTerm,
+    selectedCategories,
+    selectedDynamicFilters,
+    minPrice,
+    maxPrice,
+    isClient,
+    fetchProductsWithFilters,
+    initialProducts,
+    MIN_PRICE,
+    MAX_PRICE
+  ]);
 
   // Ensure client-side rendering
   useEffect(() => {
@@ -177,6 +244,14 @@ export default function ProductsClient({ products: initialProducts, categories, 
     //   initialProductsCount: initialProducts.length
     // });
   }, []);
+
+  // Initial load - ensure we have products when component mounts
+  useEffect(() => {
+    if (isClient && products.length === 0) {
+      console.log('🏁 Initial load - setting initial products');
+      setProducts(initialProducts);
+    }
+  }, [isClient, initialProducts]); // Only run when client is ready or initial products change
 
   const sortOptions = [
     { value: "featured", label: "Featured" },
@@ -202,24 +277,12 @@ export default function ProductsClient({ products: initialProducts, categories, 
         action: currentValues.includes(value) ? 'REMOVE' : 'ADD'
       });
 
-      const updatedFilters = {
+      return {
         ...prev,
         [filterName]: newValues
       };
-
-      // Trigger API call with the selected filter
-      if (newValues.length > 0) {
-        // Use the first selected value for the API call
-        console.log('🚀 Triggering API call with filter:', filterName, newValues[0]);
-        fetchFilteredProducts(filterName, newValues[0]);
-      } else {
-        // If no filters selected, fetch all products
-        console.log('🔄 No filters selected, fetching all products');
-        fetchFilteredProducts();
-      }
-
-      return updatedFilters;
     });
+    // Note: API call will be triggered by useEffect
   };
 
   const handlePriceInputChange = (type: 'min' | 'max', value: string) => {
@@ -268,39 +331,40 @@ export default function ProductsClient({ products: initialProducts, categories, 
     console.log('✅ Filters reset, showing', initialProducts.length, 'initial products');
   }
 
-  // Filter products based on search and filters
-  const filteredProducts = products.filter(product => {
-    if (!product) return false;
-
-    const matchesSearch = product.name?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
-      product.seller?.toLowerCase().includes(searchTerm?.toLowerCase())
-
-    const matchesCategory = selectedCategories.length === 0 ||
-      selectedCategories.includes(product.category)
-
-    const matchesPrice = product.price >= minPrice && product.price <= maxPrice
-
-    // Check dynamic filters - this would need to be matched against product properties
-    // For now, we'll assume all products match dynamic filters since we don't have 
-    // the product's dynamic filter values in the Product interface
-    const matchesDynamicFilters = true;
-
-    return matchesSearch && matchesCategory && matchesPrice && matchesDynamicFilters
-  })
-
-  // Sort products
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
-    switch (sortBy) {
-      case "price-asc":
-        return a.price - b.price
-      case "price-desc":
-        return b.price - a.price
-      case "rating":
-        return b.rating - a.rating
-      default:
-        return 0
+  const handleAddToCart = (product: Product) => {
+    try {
+      dispatch(addToCart({
+        id: product.id.toString(),
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        type: 'product'
+      }));
+      console.log('✅ Added to cart:', product.name);
+      // You can add a toast notification here if you have a toast system
+      // toast.success(`${product.name} added to cart!`);
+    } catch (error) {
+      console.error('❌ Failed to add to cart:', error);
+      // You can add error toast here
+      // toast.error('Failed to add product to cart');
     }
-  })
+  }
+
+  // Sort products (client-side sorting for better UX)
+  const sortedProducts = useMemo(() => {
+    return [...products].sort((a, b) => {
+      switch (sortBy) {
+        case "price-asc":
+          return a.price - b.price
+        case "price-desc":
+          return b.price - a.price
+        case "rating":
+          return b.rating - a.rating
+        default:
+          return 0
+      }
+    })
+  }, [products, sortBy])
 
   // Show loading state during hydration
   if (!isClient) {
@@ -482,7 +546,7 @@ export default function ProductsClient({ products: initialProducts, categories, 
             {/* Sort and Results Count */}
             <div className="flex items-center justify-between mb-6">
               <p className="text-gray-600">
-                Showing {sortedProducts.length} of {products.length} products
+                Showing {sortedProducts.length} products
               </p>
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
@@ -523,8 +587,8 @@ export default function ProductsClient({ products: initialProducts, categories, 
                     className="group"
                   >
                     <Card
-                      className="overflow-hidden hover:shadow-lg hover:scale-105 transition-all duration-300 bg-white border border-gray-200 rounded-xl"
-                      onClick={() => router.push(`/products/${product.id}`)}
+                      className="overflow-hidden cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-300 bg-white border border-gray-200 rounded-xl"
+                      onClick={() => router.push(`/product/${product.id}`)}
                     >
                       <CardHeader className="p-0">
                         {/* Product Image */}
@@ -569,7 +633,7 @@ export default function ProductsClient({ products: initialProducts, categories, 
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex flex-col">
                             <span className="text-2xl font-bold text-primary">
-                              {product.currency || "INR"}{product.price}
+                              ₹{product.price || product?.selling_price}
                             </span>
                             <span className="text-xs text-gray-500">
                               {product.downloads} downloads
@@ -580,8 +644,7 @@ export default function ProductsClient({ products: initialProducts, categories, 
                             className="w-fit bg-primary hover:bg-primary/80 text-white rounded-lg py-2.5 font-medium transition-colors"
                             onClick={(e) => {
                               e.stopPropagation();
-                              // Add to cart functionality here
-                              console.log('Added to cart:', product.name);
+                              handleAddToCart(product);
                             }}
                           >
                             Add to Cart

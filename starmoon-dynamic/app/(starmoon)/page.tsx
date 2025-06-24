@@ -118,7 +118,7 @@ export default async function HomePage() {
       <NewsletterSection />
       
       {/* Demo Cart Buttons for Testing */}
-      <AddToCartDemo />
+      {/* <AddToCartDemo /> */}
     </div>
   )
 }

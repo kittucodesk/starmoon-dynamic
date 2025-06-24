@@ -23,7 +23,7 @@ export default function ExpertCard({ expert }: { expert: Expert }) {
     return (
         <Card className={`group hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/20 relative overflow-hidden bg-gradient-to-b from-white to-gray-50/50 ${expert.badge ? 'transform scale-105' : ''}`}>
             {expert.badge && (
-                <div className="absolute -right-12 top-6 bg-gradient-to-r from-primary to-primary/80 text-white py-1 px-10 rotate-45 text-sm shadow-lg">
+                <div className="absolute -right-4 top-6 bg-gradient-to-r from-primary to-primary/80 text-white py-1 px-10 rotate-45 text-sm shadow-lg">
                     {expert.badge}
                 </div>
             )}
@@ -35,7 +35,7 @@ export default function ExpertCard({ expert }: { expert: Expert }) {
                         width={120}
                         height={120}
                         alt={expert.name}
-                        className="rounded-full object-cover border-4 border-primary/10"
+                        className="rounded-full object-contain border-4 border-primary/10"
                     />
                 </div>
                 <CardTitle className="text-xl group-hover:text-primary transition-colors">{expert.name}</CardTitle>

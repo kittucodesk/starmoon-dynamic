@@ -89,9 +89,7 @@ const benefits = [
 
 export default function ConsultationPage() {
   return (
-          <div className="min-h-screen bg-background">
-        {/* Header */}
-        {/* <SiteHeader /> */}
+    <div className="min-h-screen bg-background">
 
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-blue-50 to-indigo-100 py-16">

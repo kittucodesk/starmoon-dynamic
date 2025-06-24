@@ -1,5 +1,5 @@
 import { Suspense } from "react"
-import { fetchServices, fetchDynamicFilters, Service, DynamicFilter } from "@/lib/api"
+import { fetchServices, fetchDynamicFilters, fetchServiceCategories, Service, DynamicFilter, ServiceCategory } from "@/lib/api"
 import ServicesClient from "./services-client"
 
 // Static fallback data for graceful degradation
@@ -108,16 +108,18 @@ interface ServicesPageProps {
 
 async function ServicesData() {
     try {
-        // Fetch services and dynamic filters in parallel
-        const [servicesData, filtersData] = await Promise.all([
+        // Fetch services, dynamic filters, and service categories in parallel
+        const [servicesData, filtersData, categoriesData] = await Promise.all([
             fetchServices('India').catch(() => fallbackServices),
-            fetchDynamicFilters('services').catch(() => fallbackFilters)
+            fetchDynamicFilters('services').catch(() => fallbackFilters),
+            fetchServiceCategories('India').catch(() => [])
         ]);
 
         return (
             <ServicesClient 
                 initialServices={servicesData || fallbackServices}
                 dynamicFilters={filtersData || fallbackFilters}
+                serviceCategories={categoriesData || []}
             />
         );
     } catch (error) {
@@ -127,6 +129,7 @@ async function ServicesData() {
             <ServicesClient 
                 initialServices={fallbackServices}
                 dynamicFilters={fallbackFilters}
+                serviceCategories={[]}
             />
         );
     }

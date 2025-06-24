@@ -153,6 +153,24 @@ export interface ProductCategory {
   sort_order: number;
 }
 
+export interface ServiceCategory {
+  id: number;
+  service_category_name: string;
+  service_category_description: string;
+  service_category_image: string;
+  is_active: boolean;
+  sort_order: number;
+}
+
+export interface ConsultationCategory {
+  id: number;
+  consultation_category_name: string;
+  consultation_category_description: string;
+  consultation_category_image: string;
+  is_active: boolean;
+  sort_order: number;
+}
+
 export interface Testimonial {
   id: string;
   name: string;
@@ -343,6 +361,27 @@ export interface DetailedProduct {
     answer: string;
     _id: string;
   }>;
+  features: Array<{
+    title: string;
+    description: string;
+    image: string;
+    _id: string;
+  }>;
+  benefits: Array<{
+    title: string;
+    description: string;
+    icon: string;
+    _id: string;
+  }>;
+  testimonials: Array<{
+    name: string;
+    role: string;
+    company: string;
+    description: string;
+    rating: number;
+    image: string;
+    _id: string;
+  }>;
   meta_title: string;
   meta_description: string;
   meta_keywords: string[];
@@ -378,6 +417,97 @@ export interface DetailedService {
     description: string;
   }>;
   is_active: boolean;
+}
+
+export interface Consultation {
+  _id: string;
+  id?: number;
+  consultation_category: string;
+  name: string;
+  profile_image: string;
+  about: string;
+  specialization: string;
+  experience: string;
+  education: string;
+  certifications: string;
+  awards: string;
+  links: Array<{
+    label: string;
+    url: string;
+    _id: string;
+  }>;
+  availability: Array<{
+    day: string;
+    time_slots: Array<{
+      start: string;
+      end: string;
+      _id: string;
+    }>;
+    _id: string;
+  }>;
+  tags: string[];
+  dynamic_filters: Array<{
+    filter_name: string;
+    filter_value: string;
+    _id: string;
+  }>;
+  experts_mapping: Array<{
+    id: number;
+    Name: string;
+    _id: string;
+  }>;
+  products_mapping: Array<{
+    id: number;
+    Name: string;
+    _id: string;
+  }>;
+  pricing_type: string;
+  hourly_rate: number;
+  currency: string;
+  subscription_plans: any[];
+  quick_contact_no: Array<{
+    country: string;
+    contact_no: string;
+    _id: string;
+  }>;
+  whatsapp_no: Array<{
+    country: string;
+    whatsapp_no: string;
+    _id: string;
+  }>;
+  is_active: boolean;
+  faqs: Array<{
+    question: string;
+    answer: string;
+    _id: string;
+  }>;
+  features: Array<{
+    title: string;
+    description: string;
+    image: string;
+    _id: string;
+  }>;
+  benefits: Array<{
+    title: string;
+    description: string;
+    icon: string;
+    _id: string;
+  }>;
+  testimonials: Array<{
+    name: string;
+    role: string;
+    company: string;
+    description: string;
+    rating: number;
+    image: string;
+    _id: string;
+  }>;
+  badges: string;
+  meta_title: string;
+  meta_description: string;
+  meta_keywords: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CouponRequest {
@@ -428,15 +558,29 @@ export interface ServiceListingParams {
 
 export interface ProductListingParams {
   search?: string;
-  tags?: string;
-  product_category?: string;
-  badges?: string;
+  tags?: string | string[];
+  product_category?: string | string[];
+  badges?: string | string[];
   filter_name?: string;
-  filter_value?: string;
+  filter_value?: string | string[];
   min_price?: number;
   max_price?: number;
   page_no?: number;
   per_page?: number;
+}
+
+export interface ConsultationListingParams {
+  per_page?: number;
+  page_no?: number;
+  search?: string;
+  filter_name?: string;
+  filter_value?: string;
+  expert_id?: string;
+  badges?: string;
+  consultation_category?: string;
+  tags?: string;
+  min_price?: number;
+  max_price?: number;
 }
 
 // Base URL from environment variable
@@ -591,7 +735,14 @@ export async function fetchPublicProducts(country: string = 'India', params?: Pr
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          queryParams.append(key, value.toString());
+          if (Array.isArray(value)) {
+            // For arrays, append each value separately
+            value.forEach(item => {
+              queryParams.append(key, item.toString());
+            });
+          } else {
+            queryParams.append(key, value.toString());
+          }
         }
       });
     }
@@ -635,23 +786,23 @@ export async function applyCoupon(couponData: CouponRequest, token?: string): Pr
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
-    
+
     // Add Authorization header if token is provided
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    
+
     const response = await apiRequest<any>('/api/v1/offers/apply-coupon', {
       method: 'POST',
       headers,
       body: JSON.stringify(couponData),
     });
-    
+
     // Check if the response has the meta structure
     if (response.meta && response.data) {
       return response.data as CouponResponse;
     }
-    
+
     // Fallback to direct response structure
     return response as CouponResponse;
   } catch (error) {
@@ -671,7 +822,7 @@ export async function fetchActiveCoupons(country: string = 'India'): Promise<Act
   }
 }
 
-// Legacy functions for backward compatibility
+// 15. Legacy functions for backward compatibility
 export async function fetchUserData(token: string): Promise<UserProfile> {
   try {
     const response = await apiRequest<ApiResponse<UserProfile>>('/user/profile', {
@@ -686,7 +837,7 @@ export async function fetchUserData(token: string): Promise<UserProfile> {
   }
 }
 
-// Update user profile
+// 16. Update user profile
 export async function updateUserProfile(token: string, profileData: Partial<UserProfile>): Promise<UserProfile> {
   try {
     const response = await apiRequest<ApiResponse<UserProfile>>('/user/profile', {
@@ -703,7 +854,7 @@ export async function updateUserProfile(token: string, profileData: Partial<User
   }
 }
 
-// 15. Customer Signup API
+// 17. Customer Signup API
 export async function signupCustomer(signupData: SignupRequest): Promise<SignupResponse> {
   try {
     const response = await apiRequest<SignupResponse>('/api/v1/auth/customer/signup', {
@@ -717,7 +868,7 @@ export async function signupCustomer(signupData: SignupRequest): Promise<SignupR
   }
 }
 
-// 16. Customer Signin API
+// 18. Customer Signin API
 export async function signinCustomer(signinData: SigninRequest): Promise<AuthResponse> {
   try {
     const response = await apiRequest<AuthResponse>('/api/v1/auth/customer/signin_password', {
@@ -729,4 +880,49 @@ export async function signinCustomer(signinData: SigninRequest): Promise<AuthRes
     console.error('Failed to signin customer:', error);
     throw error;
   }
-}  
+}
+
+// 19. Service Category API
+export async function fetchServiceCategories(country: string = 'India'): Promise<ServiceCategory[]> {
+  try {
+    const response = await apiRequest<{ data: ServiceCategory[] }>(`/api/v1/service-category/web/list/${country}`);
+    return response.data || [];
+  } catch (error) {
+    console.error('Failed to fetch service categories:', error);
+    throw error;
+  }
+}
+
+// 20. Consultation Category API
+export async function fetchConsultationCategories(country: string = 'India'): Promise<ConsultationCategory[]> {
+  try {
+    const response = await apiRequest<{ data: ConsultationCategory[] }>(`/api/v1/consultation-category/web/list/${country}`);
+    return response.data || [];
+  } catch (error) {
+    console.error('Failed to fetch consultation categories:', error);
+    throw error;
+  }
+}
+
+// 21. Consultations Listing API
+export async function fetchConsultations(country: string = 'India', params?: ConsultationListingParams): Promise<Consultation[]> {
+  try {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+
+    const queryString = queryParams.toString();
+    const endpoint = `/api/v1/consultation/country-wise-list/${country}${queryString ? `?${queryString}` : ''}`;
+
+    const response = await apiRequest<{ meta: any; data: Consultation[] }>(endpoint);
+    return response.data || [];
+  } catch (error) {
+    console.error('Failed to fetch consultations:', error);
+    throw error;
+  }
+}

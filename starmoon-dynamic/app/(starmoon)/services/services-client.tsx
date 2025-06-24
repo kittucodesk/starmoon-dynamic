@@ -13,7 +13,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Checkbox } from "@/components/ui/checkbox"
 import { Slider } from "@/components/ui/slider"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Service, DynamicFilter } from "@/lib/api"
+import { Service, DynamicFilter, ServiceCategory } from "@/lib/api"
 
 // Define a transformed Service type for UI
 type TransformedService = {
@@ -40,6 +40,7 @@ type TransformedService = {
 interface ServicesClientProps {
     initialServices: Service[]
     dynamicFilters: DynamicFilter[]
+    serviceCategories: ServiceCategory[]
 }
 
 const sortOptions = [
@@ -168,7 +169,7 @@ const getActiveFilterCount = (selectedFilters: Record<string, string[]>): number
     return count;
 };
 
-export default function ServicesClient({ initialServices, dynamicFilters }: ServicesClientProps) {
+export default function ServicesClient({ initialServices, dynamicFilters, serviceCategories }: ServicesClientProps) {
     const router = useRouter();
     const [services, setServices] = useState<Service[]>(initialServices);
     const [loading, setLoading] = useState(false);
@@ -178,10 +179,25 @@ export default function ServicesClient({ initialServices, dynamicFilters }: Serv
         return services.filter(service => service.is_active).map(transformServiceData);
     }, [services]);
 
-    // Extract filter options from dynamic filters
+    // Extract filter options from dynamic filters and service categories
     const filterSections = useMemo(() => {
         const sections: Record<string, { title: string; options: { label: string; _id: string }[] }> = {};
 
+        // Add service categories as a filter section
+        if (serviceCategories.length > 0) {
+            sections['service_category'] = {
+                title: 'Service Category',
+                options: serviceCategories
+                    .filter(cat => cat.is_active)
+                    .sort((a, b) => a.sort_order - b.sort_order)
+                    .map(cat => ({
+                        label: cat.service_category_name,
+                        _id: cat.id.toString()
+                    }))
+            };
+        }
+
+        // Add dynamic filters
         dynamicFilters.forEach(filter => {
             filter.sections.forEach(section => {
                 const sectionKey = section.title.toLowerCase().replace(/\s+/g, '_');
@@ -193,7 +209,7 @@ export default function ServicesClient({ initialServices, dynamicFilters }: Serv
         });
 
         return sections;
-    }, [dynamicFilters]);
+    }, [dynamicFilters, serviceCategories]);
 
     // Calculate price range
     const priceRange = useMemo(() => {
@@ -459,12 +475,12 @@ export default function ServicesClient({ initialServices, dynamicFilters }: Serv
                                     <span className="font-semibold">Price Range</span>
                                 </AccordionTrigger>
                                 <AccordionContent className="flex flex-col gap-1">
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 w-full">
                                         <Input
                                             type="number"
                                             value={priceFilterRange[0]}
                                             onChange={(e) => setPriceFilterRange([parseInt(e.target.value) || priceRange.min, priceFilterRange[1]])}
-                                            className="w-20"
+                                            className="w-full"
                                             min={priceRange.min}
                                             max={priceRange.max}
                                         />
@@ -473,7 +489,7 @@ export default function ServicesClient({ initialServices, dynamicFilters }: Serv
                                             type="number"
                                             value={priceFilterRange[1]}
                                             onChange={(e) => setPriceFilterRange([priceFilterRange[0], parseInt(e.target.value) || priceRange.max])}
-                                            className="w-20"
+                                            className="w-full"
                                             min={priceRange.min}
                                             max={priceRange.max}
                                         />
