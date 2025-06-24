@@ -38,7 +38,7 @@ const features = [
     },
     {
         title: "Expert Team",
-        description: "Highly skilled professionals at your service",
+        description: "Highly skilled and trained professionals at your service",
         icon: Users,
         color: "from-purple-500 to-pink-500",
         delay: 0.2
