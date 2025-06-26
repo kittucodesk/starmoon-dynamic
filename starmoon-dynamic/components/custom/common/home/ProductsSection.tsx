@@ -339,6 +339,7 @@ export default function ProductsSection() {
               1280: { slidesPerView: 4 },
             }}
             autoplay={{ delay: 5000, disableOnInteraction: true, pauseOnMouseEnter: true }}
+            navigation={true}
             className="!py-8"
           >
             {filteredProducts.map((product, i) => (

@@ -163,7 +163,7 @@ export function CartDrawer() {
 
                 <div className="space-y-2">
                   <Button className="w-full" size="lg" asChild onClick={handleCheckout}>
-                    <Link href="/cart">Continue to Checkout</Link>
+                    <Link href="/checkout">Continue to Checkout</Link>
                   </Button>
                   <Button variant="outline" className="w-full" onClick={handleCloseCart}>
                     Continue Shopping

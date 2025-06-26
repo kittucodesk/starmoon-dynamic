@@ -17,13 +17,14 @@ type Expert = {
     skills: string[];
     reviews: number;
     rate: string;
+    consultation_category: string;
 };
 
 export default function ExpertCard({ expert }: { expert: Expert }) {
     return (
         <Card className={`group hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/20 relative overflow-hidden bg-gradient-to-b from-white to-gray-50/50 ${expert.badge ? 'transform scale-105' : ''}`}>
             {expert.badge && (
-                <div className="absolute -right-4 top-6 bg-gradient-to-r from-primary to-primary/80 text-white py-1 px-10 rotate-45 text-sm shadow-lg">
+                <div className="absolute -right-12 top-6 bg-gradient-to-r from-primary to-primary/80 text-white py-1 px-10 rotate-45 text-sm shadow-lg">
                     {expert.badge}
                 </div>
             )}
@@ -39,19 +40,19 @@ export default function ExpertCard({ expert }: { expert: Expert }) {
                     />
                 </div>
                 <CardTitle className="text-xl group-hover:text-primary transition-colors">{expert.name}</CardTitle>
-                <CardDescription className="text-sm font-medium text-primary/80">{expert.title}</CardDescription>
+                <CardDescription className="text-sm font-medium text-primary/80">{expert.consultation_category}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 min-h-[40px]">{expert.description}</p>
                 <div className="flex flex-col gap-2">
                     {expert.skills.slice(0, 3).map((skill, idx) => (
-                        <Badge key={idx} variant="secondary" className="text-xs bg-primary/5 hover:bg-primary/10 transition-colors w-fit">
+                        <Badge key={idx} variant="secondary" className="text-xs bg-primary/5 hover:bg-primary/10 transition-colors w-fit capitalize">
                             {skill}
                         </Badge>
                     ))}
-                    {expert.skills.length > 4 && (
+                    {/* {expert.skills.length > 4 && (
                         <Badge variant="secondary" className="text-xs bg-primary/5">+{expert.skills.length - 4}</Badge>
-                    )}
+                    )} */}
                 </div>
                 <div className="flex items-center justify-between gap-2 text-sm text-muted-foreground">
                     {/* <div className="flex items-center gap-1">

@@ -541,6 +541,136 @@ export interface ActiveCoupon {
   is_active: boolean;
 }
 
+// Order Related Interfaces
+export interface OrderItem {
+  item_type: 'products' | 'services';
+  item_id: string;
+  name: string;
+  sku: string;
+  description: string;
+  quantity: number;
+  price: number;
+  total: number;
+}
+
+export interface OrderAddress {
+  name: string;
+  phone: string;
+  email: string;
+  address_line1: string;
+  address_line2?: string;
+  city: string;
+  state: string;
+  pincode: string;
+  country: string;
+}
+
+export interface OrderPayment {
+  method: string;
+  status: 'Pending' | 'Paid' | 'Failed' | 'Refunded';
+  transaction_id?: string;
+  payment_gateway?: string;
+  paid_at?: string;
+  invoice_url?: string;
+}
+
+export interface CreateOrderRequest {
+  order_number: string;
+  user: string;
+  items: OrderItem[];
+  shipping_address: OrderAddress;
+  billing_address: OrderAddress;
+  subtotal: number;
+  discount: number;
+  offer_discount: number;
+  tax: number;
+  shipping_fee: number;
+  total: number;
+  payment: OrderPayment;
+  order_status: 'Created' | 'Confirmed' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
+  coupon_code?: string;
+}
+
+export interface UpdateOrderRequest {
+  payment_response: {
+    payment_id: string;
+    [key: string]: any; // Allow additional payment response fields
+  };
+}
+
+export interface OrderResponse {
+  meta: {
+    status: boolean;
+    message: string;
+  };
+  data: {
+    id: string;
+    order_number: string;
+    user: string;
+    items: OrderItem[];
+    shipping_address: OrderAddress;
+    billing_address: OrderAddress;
+    subtotal: number;
+    discount: number;
+    offer_discount: number;
+    tax: number;
+    shipping_fee: number;
+    total: number;
+    payment: OrderPayment;
+    order_status: string;
+    coupon_code?: string;
+    created_at: string;
+    updated_at: string;
+  };
+}
+
+// Razorpay Related Interfaces
+export interface CreateRazorpayOrderRequest {
+  amount: number;
+  currency: string;
+  receipt: string;
+}
+
+export interface CreateRazorpayOrderResponse {
+  meta: {
+    status: boolean;
+    message: string;
+  };
+  data: {
+    id: string;
+    entity: string;
+    amount: number;
+    amount_paid: number;
+    amount_due: number;
+    currency: string;
+    receipt: string;
+    offer_id?: string;
+    status: string;
+    attempts: number;
+    notes: Record<string, any>;
+    created_at: number;
+  };
+}
+
+export interface VerifyRazorpayPaymentRequest {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}
+
+export interface VerifyRazorpayPaymentResponse {
+  meta: {
+    status: boolean;
+    message: string;
+  };
+  data: {
+    payment_verified: boolean;
+    order_id: string;
+    payment_id: string;
+    signature: string;
+  };
+}
+
 // Query Parameters Interfaces
 export interface ServiceListingParams {
   per_page?: number;
@@ -923,6 +1053,119 @@ export async function fetchConsultations(country: string = 'India', params?: Con
     return response.data || [];
   } catch (error) {
     console.error('Failed to fetch consultations:', error);
+    throw error;
+  }
+}
+
+// 22. Get Consultation by ID API
+export async function fetchConsultationById(id: string): Promise<Consultation> {
+  try {
+    const endpoint = `/api/v1/consultation/get/${id}`;
+
+    const response = await apiRequest<{ meta: any; data: Consultation }>(endpoint);
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to fetch consultation ${id}:`, error);
+    throw error;
+  }
+}
+
+// 23. Create Order API
+export async function createOrder(orderData: CreateOrderRequest, token?: string): Promise<OrderResponse> {
+  try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    // Add Authorization header if token is provided
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await apiRequest<OrderResponse>('/api/v1/orders/create', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(orderData),
+    });
+
+    return response;
+  } catch (error) {
+    console.error('Failed to create order:', error);
+    throw error;
+  }
+}
+
+// 24. Update Order API
+export async function updateOrder(orderId: string, updateData: UpdateOrderRequest, token?: string): Promise<OrderResponse> {
+  try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    // Add Authorization header if token is provided
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await apiRequest<OrderResponse>(`/api/v1/orders/${orderId}/update`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(updateData),
+    });
+
+    return response;
+  } catch (error) {
+    console.error(`Failed to update order ${orderId}:`, error);
+    throw error;
+  }
+}
+
+// 25. Create Razorpay Order API
+export async function createRazorpayOrder(orderData: CreateRazorpayOrderRequest, token?: string): Promise<CreateRazorpayOrderResponse> {
+  try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    // Add Authorization header if token is provided
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await apiRequest<CreateRazorpayOrderResponse>('/api/v1/orders/create-razorpay-order', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(orderData),
+    });
+
+    return response;
+  } catch (error) {
+    console.error('Failed to create Razorpay order:', error);
+    throw error;
+  }
+}
+
+// 26. Verify Razorpay Payment API
+export async function verifyRazorpayPayment(paymentData: VerifyRazorpayPaymentRequest, token?: string): Promise<VerifyRazorpayPaymentResponse> {
+  try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    // Add Authorization header if token is provided
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await apiRequest<VerifyRazorpayPaymentResponse>('/api/v1/orders/verify-razorpay-order', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(paymentData),
+    });
+
+    return response;
+  } catch (error) {
+    console.error('Failed to verify Razorpay payment:', error);
     throw error;
   }
 }

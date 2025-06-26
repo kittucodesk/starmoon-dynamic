@@ -22,7 +22,7 @@ export default function Signup() {
           </Link>
         </div>
         <div className="flex flex-1 items-center justify-center">
-          <div className="w-full max-w-xs">
+          <div className="w-full max-w-md border p-4 rounded-2xl shadow-lg">
             <SignupForm />
           </div>
         </div>

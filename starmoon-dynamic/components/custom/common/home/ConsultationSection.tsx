@@ -30,6 +30,7 @@ interface Consultation {
   price: string;
   features: string[];
   icon: string;
+  consultation_category: string;
 }
 
 // Transform API consultation data to match ExpertCard expected format
@@ -40,9 +41,9 @@ function transformConsultationData(apiConsultation: ApiConsultation): Consultati
 
   // Create skills array from specialization, tags, and features
   const skills = [
-    apiConsultation.specialization,
-    ...apiConsultation.tags.slice(0, 2),
-    ...(apiConsultation.features?.slice(0, 2).map(f => f.title) || [])
+    // apiConsultation.specialization,
+    ...apiConsultation.tags.slice(0, 3),
+    // ...(apiConsultation.features?.slice(0, 2).map(f => f.title) || [])
   ].filter(Boolean).slice(0, 5);
 
   // Generate a numeric ID from MongoDB ObjectId
@@ -66,6 +67,7 @@ function transformConsultationData(apiConsultation: ApiConsultation): Consultati
     reviews: apiConsultation.testimonials?.length || Math.floor(Math.random() * 50) + 10,
     rate: hourlyRate > 0 ? `${currency} ${hourlyRate}/hour` : 'Contact for pricing',
     title: `${apiConsultation.name} - ${apiConsultation.specialization}`,
+    consultation_category: apiConsultation.consultation_category,
     description: apiConsultation.about || '',
     image: apiConsultation.profile_image ? 
       `${process.env.NEXT_PUBLIC_DOMAIN_URL}${apiConsultation.profile_image}` : 
@@ -103,7 +105,7 @@ export default function ConsultationSection() {
         try {
           const cRes = await fetch("/data/consultations.json");
           const fallbackData = await cRes.json();
-          setConsultations(fallbackData);
+          // setConsultations(fallbackData);
         } catch (fallbackError) {
           console.error('Failed to fetch fallback consultations:', fallbackError);
           setConsultations([]);
@@ -135,7 +137,7 @@ export default function ConsultationSection() {
           <div className="space-y-2">
             <Badge 
               variant="outline" 
-              className="bg-primary/5 dark:bg-primary/10 text-primary dark:text-blue-400 border-primary/20 dark:border-primary/30 dark:bg-slate-800/50 hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors duration-300"
+              className="bg-primary/5 dark:bg-primary/10 text-primary dark:text-blue-400 border-primary/20 dark:border-primary/30 hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors duration-300"
             >
               Expert Consultation
             </Badge>
@@ -178,10 +180,7 @@ export default function ConsultationSection() {
             }}
             autoplay={{ delay: 5000, disableOnInteraction: true, pauseOnMouseEnter: true }}
             className="!py-8"
-            navigation={{
-              nextEl: '.swiper-button-next',
-              prevEl: '.swiper-button-prev',
-            }}
+            navigation={true}
           >
             {consultations.map((expert, index) => (
               <SwiperSlide key={expert.id} className="h-full">
