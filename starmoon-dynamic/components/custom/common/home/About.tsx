@@ -52,7 +52,7 @@ const features = [
     },
     {
         title: "24/7 Support",
-        description: "Round-the-clock assistance for your needs",
+        description: "Round-the-clock 24/7 assistance for your needs",
         icon: Clock,
         color: "from-green-500 to-emerald-500",
         delay: 0.4
