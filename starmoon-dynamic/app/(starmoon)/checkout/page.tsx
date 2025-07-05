@@ -20,8 +20,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { useAppSelector } from '@/lib/store/hooks'
+import { useRouter } from 'next/navigation'
 
 // Form validation schema - dynamic based on auth status
 const createCheckoutSchema = (isAuthenticated: boolean) => z.object({
@@ -72,6 +72,7 @@ const countries = [
 ]
 
 export default function CheckoutPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [passwordStrength, setPasswordStrength] = useState(0)
@@ -79,11 +80,14 @@ export default function CheckoutPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null)
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false)
   const [promoError, setPromoError] = useState('')
-  const [showGuestRegistration, setShowGuestRegistration] = useState(false)
-  const [isRegistering, setIsRegistering] = useState(false)
-  const [registrationError, setRegistrationError] = useState('')
-  const [pendingFormValues, setPendingFormValues] = useState<any>(null)
-  const [isProcessingOrder, setIsProcessingOrder] = useState(false)
+  const [guestUserInfo, setGuestUserInfo] = useState<{
+    email: string;
+    phone: string;
+    fullName: string;
+    company?: string;
+  } | null>(null)
+  const [showGuestInfoSaved, setShowGuestInfoSaved] = useState(false)
+  const [addressesCompleted, setAddressesCompleted] = useState(false)
 
   // Get auth state and cart from Redux
   const { isAuthenticated, user } = useAppSelector((state) => state.auth)
@@ -105,12 +109,29 @@ export default function CheckoutPage() {
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
       accountType: 'guest',
-      useBillingForShipping: true,
+      password: '',
+      confirmPassword: '',
+      fullName: isAuthenticated ? user?.name || '' : '',
+      company: '',
+      email: isAuthenticated ? user?.email || '' : '',
+      phone: isAuthenticated ? user?.phone || '' : '',
+      billingAddress: {
+        street: '',
+        city: '',
+        state: '',
+        zipCode: '',
+        country: '',
+      },
+      useBillingForShipping: false,
+      shippingAddress: {
+        street: '',
+        city: '',
+        state: '',
+        zipCode: '',
+        country: '',
+      },
       paymentMethod: 'stripe',
       savePaymentMethod: false,
-      // Pre-fill user data if authenticated
-      fullName: isAuthenticated ? user?.name || '' : '',
-      email: isAuthenticated ? user?.email || '' : '',
     },
   })
 
@@ -125,6 +146,70 @@ export default function CheckoutPage() {
   const accountType = form.watch('accountType')
   const useBillingForShipping = form.watch('useBillingForShipping')
   const password = form.watch('password')
+  
+  // Watch form fields for guest user info capture
+  const watchedEmail = form.watch('email')
+  const watchedPhone = form.watch('phone')
+  const watchedFullName = form.watch('fullName')
+  const watchedCompany = form.watch('company')
+  const watchedBillingAddress = form.watch('billingAddress')
+  const watchedShippingAddress = form.watch('shippingAddress')
+
+  // Store guest user info when contact info is complete
+  useEffect(() => {
+    if (!isAuthenticated && accountType === 'guest' && watchedEmail && watchedPhone && watchedFullName) {
+      const guestInfo = {
+        email: watchedEmail,
+        phone: watchedPhone,
+        fullName: watchedFullName,
+        company: watchedCompany || undefined
+      }
+      
+      // Only update if the info has actually changed
+      const currentInfo = JSON.stringify(guestUserInfo)
+      const newInfo = JSON.stringify(guestInfo)
+      
+      if (currentInfo !== newInfo) {
+        setGuestUserInfo(guestInfo)
+        // Store in localStorage for persistence
+        localStorage.setItem('guestUserInfo', JSON.stringify(guestInfo))
+      }
+    }
+  }, [isAuthenticated, accountType, watchedEmail, watchedPhone, watchedFullName, watchedCompany, guestUserInfo])
+
+  // Check if addresses are completed and show CTA
+  useEffect(() => {
+    if (!isAuthenticated && accountType === 'guest' && guestUserInfo) {
+      const isBillingComplete = watchedBillingAddress && 
+        watchedBillingAddress.street && 
+        watchedBillingAddress.city && 
+        watchedBillingAddress.state && 
+        watchedBillingAddress.zipCode && 
+        watchedBillingAddress.country
+
+      const isShippingComplete = useBillingForShipping || (
+        watchedShippingAddress &&
+        watchedShippingAddress.street &&
+        watchedShippingAddress.city &&
+        watchedShippingAddress.state &&
+        watchedShippingAddress.zipCode &&
+        watchedShippingAddress.country
+      )
+
+      if (isBillingComplete && isShippingComplete && !showGuestInfoSaved) {
+        setAddressesCompleted(true)
+        setShowGuestInfoSaved(true)
+      }
+    }
+  }, [
+    isAuthenticated, 
+    accountType, 
+    watchedBillingAddress, 
+    watchedShippingAddress, 
+    useBillingForShipping, 
+    guestUserInfo, 
+    showGuestInfoSaved
+  ])
 
   // Password strength calculator
   const calculatePasswordStrength = (password: string) => {
@@ -170,142 +255,15 @@ export default function CheckoutPage() {
     setPromoError('')
   }
 
-  const handleGuestRegistration = async (formValues: z.infer<typeof checkoutSchema>) => {
-    if (!formValues.email || !formValues.phone) {
-      setRegistrationError('Email and phone number are required for registration')
-      return
-    }
-
-    setIsRegistering(true)
-    setRegistrationError('')
-
-    try {
-      // Prepare registration payload
-      const registrationPayload = {
-        email: formValues.email,
-        phone_number: formValues.phone,
-        password: 'starmoon@123',
-        name: formValues.fullName,
-        company: formValues.company || ''
-      }
-
-      // Make API call to register endpoint
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(registrationPayload),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        // Registration successful - auto login and complete order
-        console.log('Registration successful:', data)
-
-        // Close the dialog
-        setShowGuestRegistration(false)
-
-        // Auto-login the user and process order
-        alert('Welcome! Your account has been created successfully. Processing your order...')
-
-        // Process the actual order
-        await processOrder(formValues)
-
-      } else {
-        // Handle registration errors
-        if (data.message && data.message.includes('already exists')) {
-          setRegistrationError('This email is already registered. Would you like to log in instead?')
-        } else {
-          setRegistrationError(data.message || 'Registration failed. Please try again.')
-        }
-      }
-    } catch (error) {
-      console.error('Registration error:', error)
-      setRegistrationError('Network error. Please check your connection and try again.')
-    } finally {
-      setIsRegistering(false)
-    }
+  const handleGuestInfoSave = () => {
+    // Additional processing for guest user info if needed
+    console.log('Guest user information saved:', guestUserInfo)
+    // You can add additional logic here like sending to analytics, etc.
   }
 
-  const processOrder = async (formValues: z.infer<typeof checkoutSchema>) => {
-    setIsProcessingOrder(true)
-    try {
-      console.log('Processing order with values:', formValues)
-
-      // Here you would make the actual order API call
-      // For now, simulate the order processing
-      await new Promise(resolve => setTimeout(resolve, 2000))
-
-      // Redirect to order confirmation page
-      alert('Order processed successfully! Redirecting to confirmation page...')
-      // window.location.href = '/order-confirmation'
-
-    } catch (error) {
-      console.error('Order processing error:', error)
-      alert('Failed to process order. Please try again.')
-    } finally {
-      setIsProcessingOrder(false)
-    }
-  }
-
-  const handleAccountCreation = async (formValues: z.infer<typeof checkoutSchema>) => {
-    try {
-      const registrationPayload = {
-        email: formValues.email,
-        phone_number: formValues.phone,
-        password: formValues.password,
-        name: formValues.fullName,
-        company: formValues.company || ''
-      }
-
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(registrationPayload),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        console.log('Account created successfully:', data)
-        // Auto-login the user and process order
-        await processOrder(formValues)
-      } else {
-        alert(data.message || 'Failed to create account. Please try again.')
-      }
-    } catch (error) {
-      console.error('Account creation error:', error)
-      alert('Network error. Please check your connection and try again.')
-    }
-  }
-
-  const onSubmit = async (values: z.infer<typeof checkoutSchema>) => {
-    console.log('Form submitted:', values)
-
-    // If user is already authenticated, proceed directly with order
-    if (isAuthenticated) {
-      console.log('User authenticated - processing order directly')
-      await processOrder(values)
-      return
-    }
-
-    // If account type is 'create', create account first then process order
-    if (values.accountType === 'create') {
-      console.log('Creating new account with provided password')
-      await handleAccountCreation(values)
-      return
-    }
-
-    // If guest checkout, show registration confirmation dialog
-    if (values.accountType === 'guest') {
-      console.log('Guest checkout - showing registration dialog')
-      setPendingFormValues(values)
-      setShowGuestRegistration(true)
-    }
+  const onSubmit = (values: z.infer<typeof checkoutSchema>) => {
+    console.log(values)
+    // Handle form submission
   }
 
   return (
@@ -346,7 +304,7 @@ export default function CheckoutPage() {
           {/* Checkout Form Section */}
           <div className="lg:col-span-2">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 sm:space-y-8">
+              <form id="checkout-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 sm:space-y-8">
                 {/* Checkout Options - Only show if not authenticated */}
                 {!isAuthenticated && (
                   <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
@@ -410,6 +368,7 @@ export default function CheckoutPage() {
                                     type="button"
                                     variant="ghost"
                                     className="w-full justify-start p-0 h-auto font-normal"
+                                    onClick={() => router.push('/login')}
                                   >
                                     <div className="flex items-center space-x-3">
                                       <LogIn className="w-4 h-4 text-blue-600" />
@@ -629,6 +588,18 @@ export default function CheckoutPage() {
                         </div>
                       </div>
                     )}
+
+                    {/* Show info message for guest users */}
+                    {!isAuthenticated && accountType === 'guest' && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2 text-amber-700">
+                          <HelpCircle className="w-4 h-4" />
+                          <span className="text-sm font-medium">
+                            Your information will be saved for this order and you'll receive updates via email and SMS
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -730,12 +701,13 @@ export default function CheckoutPage() {
                         <FormItem className="flex flex-row items-start space-x-3 space-y-0 pt-4">
                           <FormControl>
                             <Checkbox
+                              id="useBillingForShipping"
                               checked={field.value}
                               onCheckedChange={field.onChange}
                             />
                           </FormControl>
                           <div className="space-y-1 leading-none">
-                            <FormLabel>Use billing address for shipping</FormLabel>
+                            <FormLabel htmlFor="useBillingForShipping">Use billing address for shipping</FormLabel>
                           </div>
                         </FormItem>
                       )}
@@ -838,6 +810,61 @@ export default function CheckoutPage() {
                               </FormItem>
                             )}
                           />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )}
+
+                {/* Guest Information Saved CTA */}
+                {!isAuthenticated && accountType === 'guest' && showGuestInfoSaved && guestUserInfo && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-6"
+                  >
+                    <Card className="shadow-sm bg-primary border-green-200">
+                      <CardContent className="p-6">
+                        <div className="flex items-start gap-4">
+                          <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Check className="w-5 h-5" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold mb-2 text-white">Information Saved Successfully!</h3>
+                            <div className="text-sm mb-4">
+                              <p className="mb-1 text-white">
+                                <strong>Name:</strong> {guestUserInfo.fullName}
+                                {guestUserInfo.company && (
+                                  <span className="ml-2 text-white">({guestUserInfo.company})</span>
+                                )}
+                              </p>
+                              <p className="mb-1 text-white"><strong>Email:</strong> {guestUserInfo.email}</p>
+                              <p className="text-white"><strong>Phone:</strong> {guestUserInfo.phone}</p>
+                            </div>
+                            <div className="flex flex-wrap justify-end gap-3">
+                              <Button
+                                type="button"
+                                onClick={handleGuestInfoSave}
+                                className="bg-green-600 hover:bg-green-700 text-white transition-colors duration-200"
+                                size="sm"
+                              >
+                                <Check className="w-4 h-4 mr-2" />
+                                Confirm Details
+                              </Button>
+                              {/* <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                  setShowGuestInfoSaved(false)
+                                  setAddressesCompleted(false)
+                                }}
+                                size="sm"
+                                className="border-green-300 text-green-700 hover:bg-green-50"
+                              >
+                                Edit Information
+                              </Button> */}
+                            </div>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -1049,26 +1076,14 @@ export default function CheckoutPage() {
                     <Button
                       type="submit"
                       form="checkout-form"
-                      disabled={isProcessingOrder}
                       className="w-full text-lg font-semibold bg-primary hover:bg-primary/90 active:bg-primary/95 hover:shadow-lg active:shadow-md transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] focus:ring-4 focus:ring-primary/20"
                     >
-                      {isProcessingOrder ? (
-                        <motion.div
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                          className="flex items-center gap-2"
-                        >
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                          Processing...
-                        </motion.div>
-                      ) : (
-                        <motion.span
-                          whileHover={{ scale: 1.05 }}
-                          className="flex items-center gap-2"
-                        >
-                          Proceed to Payment
-                        </motion.span>
-                      )}
+                      <motion.span
+                        whileHover={{ scale: 1.05 }}
+                        className="flex items-center gap-2"
+                      >
+                        Proceed to Payment
+                      </motion.span>
                     </Button>
 
                     <div className="text-center">
@@ -1110,69 +1125,6 @@ export default function CheckoutPage() {
             </Link>
           </p>
         </div>
-
-        {/* Guest Registration Dialog */}
-        <Dialog open={showGuestRegistration} onOpenChange={setShowGuestRegistration}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Check className="h-5 w-5 text-green-600" />
-                Guest Registration: Finishing Up!
-              </DialogTitle>
-              <DialogDescription className="text-left space-y-3 pt-2">
-                <p>
-                  Thanks for providing your address details! To complete your order and save your information for future visits, we just need to quickly register your account.
-                </p>
-                <p>
-                  We'll use the email and phone number you provided to create your account. Your initial password will be <strong>starmoon@123</strong>. You can easily change this password in your profile settings after you're logged in.
-                </p>
-                <p className="font-medium text-primary">
-                  Ready to register and complete your purchase?
-                </p>
-              </DialogDescription>
-            </DialogHeader>
-
-            {registrationError && (
-              <Alert className="border-red-200 bg-red-50">
-                <AlertDescription className="text-red-700">
-                  {registrationError}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowGuestRegistration(false)}
-                disabled={isRegistering}
-                className="w-full sm:w-auto"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => handleGuestRegistration(pendingFormValues)}
-                disabled={isRegistering || !pendingFormValues}
-                className="w-full sm:w-auto bg-primary hover:bg-primary/90"
-              >
-                {isRegistering ? (
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="flex items-center gap-2"
-                  >
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                    Registering...
-                  </motion.div>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <Check className="h-4 w-4" />
-                    Register & Complete Order
-                  </span>
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </div>
   )

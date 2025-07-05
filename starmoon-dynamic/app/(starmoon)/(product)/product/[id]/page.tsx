@@ -19,6 +19,9 @@ export default function ProductDetailPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
+    // const ProductShowcase = ({ product }) => {
+    //     const [showFull, setShowFull] = useState(false);
+
     // Fetch product data from API
     useEffect(() => {
         const fetchProduct = async () => {
@@ -63,31 +66,31 @@ export default function ProductDetailPage() {
         return { price: 0, currency: 'INR' }
     }
 
-        const getProductImage = () => {
+    const getProductImage = () => {
         if (!product?.product_thumb_image) return '/placeholder.svg'
-        return product.product_thumb_image.startsWith('http') 
-            ? product.product_thumb_image 
+        return product.product_thumb_image.startsWith('http')
+            ? product.product_thumb_image
             : `${process.env.NEXT_PUBLIC_DOMAIN_URL}${product.product_thumb_image}`
     }
 
     // Convert YouTube URL to embeddable format
     const getEmbedUrl = (url: string) => {
         if (!url || typeof url !== 'string') return null
-        
+
         try {
             // Handle different YouTube URL formats
             const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
             const match = url.match(youtubeRegex)
-            
+
             if (match && match[1]) {
                 return `https://www.youtube.com/embed/${match[1]}?autoplay=0&rel=0&modestbranding=1&controls=1`
             }
-            
+
             // If it's already an embed URL, return as is
             if (url.includes('youtube.com/embed/')) {
                 return url
             }
-            
+
             return null
         } catch (error) {
             console.error('Error processing YouTube URL:', error)
@@ -136,12 +139,12 @@ export default function ProductDetailPage() {
             return product.features.map((feature, index) => ({
                 title: feature.title.trim(),
                 description: feature.description.trim(),
-                image: feature.image && feature.image.trim() 
-                    ? `https://atapp.ecom.ind.in${feature.image}` 
+                image: feature.image && feature.image.trim()
+                    ? `https://atapp.ecom.ind.in${feature.image}`
                     : getDefaultFeatureImage(index)
             }))
         }
-        
+
         // Fallback static features if API doesn't have features
         return [
             {
@@ -166,7 +169,7 @@ export default function ProductDetailPage() {
     const getDefaultFeatureImage = (index: number) => {
         const defaultImages = [
             "/Products/projectmanagement2.jpg",
-            "/Products/collaboration.jpg", 
+            "/Products/collaboration.jpg",
             "/Products/projectmanagement3.jpg",
             "/Products/workflow.jpg",
             "/Products/analytics.gif"
@@ -185,7 +188,7 @@ export default function ProductDetailPage() {
                 description: benefit.description.trim(),
             }))
         }
-        
+
         // Fallback static benefits if API doesn't have benefits
         return [
             {
@@ -193,15 +196,15 @@ export default function ProductDetailPage() {
                 title: "50% Faster Delivery",
                 description: "Accelerate project completion with streamlined processes",
             },
-            { 
-                icon: Users, 
-                title: "Enhanced Collaboration", 
-                description: "Improve team coordination and communication" 
+            {
+                icon: Users,
+                title: "Enhanced Collaboration",
+                description: "Improve team coordination and communication"
             },
-            { 
-                icon: Shield, 
-                title: "Enterprise Security", 
-                description: "Bank-level security with SOC 2 compliance" 
+            {
+                icon: Shield,
+                title: "Enterprise Security",
+                description: "Bank-level security with SOC 2 compliance"
             },
         ]
     }
@@ -226,7 +229,7 @@ export default function ProductDetailPage() {
                 avatar: testimonial.image ? `https://atapp.ecom.ind.in${testimonial.image}` : "/Consultants/Bassam.png",
             }))
         }
-        
+
         // Fallback static testimonials if API doesn't have testimonials
         return [
             {
@@ -284,7 +287,7 @@ export default function ProductDetailPage() {
     return (
         <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white container">
             {/* Hero Section */}
-            <section className="container mx-auto px-4 py-16 lg:py-24">
+            <section className="container mx-auto px-4 py-8 ">
                 <div className="grid lg:grid-cols-2 gap-12 items-center">
                     <div>
                         <Badge className="mb-4 bg-blue-100 text-blue-700 hover:bg-blue-100">
@@ -296,10 +299,7 @@ export default function ProductDetailPage() {
                         <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
                             {product.product_description || 'Product description not available.'}
                         </p>
-                        <p className="text-base text-muted-foreground mb-8 leading-relaxed">
-                            <div dangerouslySetInnerHTML={{ __html: product.product_long_description }} />
-                            {/* {product.product_long_description || 'Product long description not available.'} */}
-                        </p>
+
                         <div className="flex flex-col sm:flex-row gap-4 mb-8">
                             <Button size="lg" className="text-lg px-8">
                                 Buy Now
@@ -324,7 +324,9 @@ export default function ProductDetailPage() {
                                 Cancel anytime
                             </div>
                         </div>
+
                     </div>
+
                     <div className="relative">
                         <div className="relative rounded-2xl overflow-hidden shadow-2xl">
                             {/* <Image
@@ -335,9 +337,9 @@ export default function ProductDetailPage() {
                                 className="w-full aspect-[4/3] object-cover"
                             /> */}
                             {/* Show video iframe if YouTube link exists and is valid */}
-                            {product.youtube_video_links && 
-                             product.youtube_video_links.length > 0 && 
-                             getEmbedUrl(product.youtube_video_links[0]) ? (
+                            {product.youtube_video_links &&
+                                product.youtube_video_links.length > 0 &&
+                                getEmbedUrl(product.youtube_video_links[0]) ? (
                                 <iframe
                                     src={getEmbedUrl(product.youtube_video_links[0]) || ''}
                                     className="w-full aspect-[16/9] border-0"
@@ -371,6 +373,18 @@ export default function ProductDetailPage() {
                         </div>
                     </div>
                 </div>
+                <div className="container px-4 mt-16">
+                    <div className=" mx-auto text-base text-muted-foreground leading-relaxed">
+                        {product.product_long_description ? (
+                            <div
+                                dangerouslySetInnerHTML={{ __html: product.product_long_description }}
+                            />
+                        ) : (
+                            <p>Product long description not available.</p>
+                        )}
+                    </div>
+                </div>
+
             </section>
 
             {/* Features Section */}
@@ -464,9 +478,9 @@ export default function ProductDetailPage() {
                 <div className="max-w-4xl mx-auto">
                     <div className="relative rounded-2xl overflow-hidden shadow-2xl">
                         {/* Show second video if available, otherwise show static image */}
-                        {product.youtube_video_links && 
-                         product.youtube_video_links.length > 1 && 
-                         getEmbedUrl(product.youtube_video_links[1]) ? (
+                        {product.youtube_video_links &&
+                            product.youtube_video_links.length > 1 &&
+                            getEmbedUrl(product.youtube_video_links[1]) ? (
                             <iframe
                                 src={getEmbedUrl(product.youtube_video_links[1]) || ''}
                                 className="w-full aspect-[16/9] border-0"
@@ -818,7 +832,7 @@ export default function ProductDetailPage() {
             </section>
 
             {/* Services & Consultations Section */}
-            <section className="container mx-auto px-4 py-16">
+            {/* <section className="container mx-auto px-4 py-16">
                 <div className="text-center mb-16">
                     <h2 className="text-3xl lg:text-4xl font-bold mb-4">Professional Services & Consultations</h2>
                     <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
@@ -1083,7 +1097,7 @@ export default function ProductDetailPage() {
                         </Button> */}
                     </div>
                 </div>
-            </section>
+            </section> */}
 
             {/* Final CTA Section */}
             <section className="bg-primary text-white py-16 rounded-sm">

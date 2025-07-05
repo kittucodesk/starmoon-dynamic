@@ -510,6 +510,19 @@ export interface Consultation {
   updatedAt: string;
 }
 
+export interface Partner {
+  id: number;
+  title: string;
+  logo: string;
+  description: string;
+  url: string;
+  country: string;
+  sort_order: number;
+  is_active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CouponRequest {
   coupon_code: string;
   order_amount: number;
@@ -910,6 +923,17 @@ export async function fetchServiceById(id: string): Promise<DetailedService> {
   }
 }
 
+// Get Full Service by ID with all details
+export async function fetchFullServiceById(id: string): Promise<Service> {
+  try {
+    const response = await apiRequest<{ meta: any; data: Service }>(`/api/v1/service/get/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to fetch full service ${id}:`, error);
+    throw error;
+  }
+}
+
 // 13. Apply Coupon API
 export async function applyCoupon(couponData: CouponRequest, token?: string): Promise<CouponResponse> {
   try {
@@ -1166,6 +1190,29 @@ export async function verifyRazorpayPayment(paymentData: VerifyRazorpayPaymentRe
     return response;
   } catch (error) {
     console.error('Failed to verify Razorpay payment:', error);
+    throw error;
+  }
+}
+
+// 27. Partners API
+export async function fetchPartners(country: string = 'India'): Promise<Partner[]> {
+  try {
+    const response = await apiRequest<{
+      meta: {
+        status: boolean;
+        message: string;
+        pagination: {
+          per_page: number;
+          page_no: number;
+          total_rows: number;
+          total_pages: number;
+        };
+      };
+      data: Partner[];
+    }>(`/api/v1/partners/web/list/${country}`);
+    return response.data || [];
+  } catch (error) {
+    console.error('Failed to fetch partners:', error);
     throw error;
   }
 }
